@@ -8,9 +8,9 @@ class Security:
         self.last = 0
 
     def create_limit_order(self, side, price, quantity):
-        # Finds first order in which side is same and price is same so we can add on the quantity if it exists
+        # Finds first order in which side is same and price is same, so we can add on the quantity if it exists
         matching_order_index = next(
-            (i for i, order in enumerate(self.order_book) if order["side"] == side and order["price"] <= price), None)
+            (i for i, order in enumerate(self.order_book) if order["side"] == side and order["price"] == price), None)
 
         if matching_order_index:
             self.order_book[matching_order_index]["size"] += quantity
@@ -94,7 +94,11 @@ class Security:
 
 my_stock = Security("AAPL")
 print(my_stock.order_book)
-my_stock.create_limit_order("buy", 100.0, 10)
-print(my_stock.order_book)
 my_stock.create_limit_order("sell", 100.0, 5)
+print(my_stock.order_book)
+my_stock.create_limit_order("sell", 99.94, 15)
+print(my_stock.order_book)
+my_stock.create_limit_order("sell", 99.99, 2)
+print(my_stock.order_book)
+my_stock.create_market_order("buy", 20)
 print(my_stock.order_book)
