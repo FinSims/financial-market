@@ -160,6 +160,9 @@ class Security:
             else:
                 break
 
+    def display_order_book(self):
+        return self.buy_orders + self.sell_orders
+
 
 my_stock = Security("AAPL")
 # print(my_stock.order_book)
@@ -167,5 +170,4 @@ my_stock.create_limit_order("sell", 102.0, 1)
 my_stock.create_limit_order("buy", 102.0, 7)
 my_stock.create_limit_order("sell", 101.0, 2)
 my_stock.create_limit_order("sell", 100.0, 2)
-order_book = my_stock.buy_orders + my_stock.sell_orders
-print(order_book)
+print(my_stock.display_order_book())
