@@ -1,3 +1,9 @@
+import pandas as pd
+from tabulate import tabulate
+from datetime import datetime
+import time
+
+
 class Security:
     def __init__(self, ticker):
         self.ticker = ticker
@@ -13,6 +19,7 @@ class Security:
 
         if side == "buy":
             trade = {
+                "time": datetime.now(),
                 "ticker": self.ticker,
                 "side": side,
                 "price": self.sell_orders[0]["price"],
@@ -23,6 +30,7 @@ class Security:
             self.execute_market_order(trade)
         else:
             trade = {
+                "time": datetime.now(),
                 "ticker": self.ticker,
                 "side": side,
                 "price": self.buy_orders[0]["price"],
@@ -61,7 +69,8 @@ class Security:
 
                 trade_price = sell_order["price"]
                 trade_quantity = min(trade["size"], sell_order["size"])
-                self.trade_history.append({"type": "buy", "price": trade_price, "quantity": trade_quantity})
+                self.trade_history.append(
+                    {"time": datetime.now(), "type": "buy", "price": trade_price, "quantity": trade_quantity})
                 trade["size"] -= trade_quantity
                 sell_order["size"] -= trade_quantity
 
@@ -81,7 +90,8 @@ class Security:
 
                 trade_price = buy_order["price"]
                 trade_quantity = min(buy_order["size"], trade["size"])
-                self.trade_history.append({"type": "sell", "price": trade_price, "quantity": trade_quantity})
+                self.trade_history.append(
+                    {"time": datetime.now(), "type": "sell", "price": trade_price, "quantity": trade_quantity})
                 buy_order["size"] -= trade_quantity
                 trade["size"] -= trade_quantity
 
@@ -93,7 +103,6 @@ class Security:
 
     def create_limit_order(self, side, price, quantity):
         # Finds first order in which side is same and price is same, so we can add on the quantity if it exists
-
         if side == "buy":
             matching_order_index = next(
                 (i for i, order in enumerate(self.buy_orders) if order["price"] == price), None)
@@ -102,6 +111,7 @@ class Security:
                 self.buy_orders[matching_order_index]["size"] += quantity
             else:
                 self.buy_orders.append({
+                    "time": datetime.now(),
                     "ticker": self.ticker,
                     "side": side,
                     "price": price,
@@ -116,6 +126,7 @@ class Security:
                 self.sell_orders[matching_order_index]["size"] += quantity
             else:
                 self.sell_orders.append({
+                    "time": datetime.now(),
                     "ticker": self.ticker,
                     "side": side,
                     "price": price,
@@ -142,11 +153,18 @@ class Security:
             if buy_order is None or sell_order is None:
                 break
 
+            # If the buy order is greater than or equal than the sell order
             if buy_order["price"] >= sell_order["price"]:
-                # If the buy order is greater than or equal than the sell order
-                trade_price = sell_order["price"]
+                # If buy order was submitted earlier than sell order, we'll use buy order's price
+                if buy_order["time"] < sell_order["time"]:
+                    trade_price = buy_order["price"]
+                else:
+                    # If sell order was submitted earlier than buy order, we'll use sell order's price
+                    trade_price = sell_order["price"]
+
                 trade_quantity = min(buy_order["size"], sell_order["size"])
-                self.trade_history.append({"type": "buy", "price": trade_price, "quantity": trade_quantity})
+                self.trade_history.append(
+                    {"time": datetime.now(), "type": "buy", "price": trade_price, "quantity": trade_quantity})
                 buy_order["size"] -= trade_quantity
                 sell_order["size"] -= trade_quantity
 
@@ -163,11 +181,36 @@ class Security:
     def display_order_book(self):
         return self.buy_orders + self.sell_orders
 
+    def display_trade_history(self, ascending):
+        if ascending:
+            self.trade_history.sort(key=lambda x: x["time"])
+        else:
+            self.trade_history.sort(key=lambda x: x["time"], reverse=True)
+
+        return self.trade_history
+
 
 my_stock = Security("AAPL")
 # print(my_stock.order_book)
-my_stock.create_limit_order("sell", 102.0, 1)
-my_stock.create_limit_order("buy", 102.0, 7)
+my_stock.create_limit_order("buy", 102.0, 17)
+time.sleep(2)
+my_stock.create_limit_order("sell", 101.0, 7)
+time.sleep(2)
 my_stock.create_limit_order("sell", 101.0, 2)
+time.sleep(2)
 my_stock.create_limit_order("sell", 100.0, 2)
-print(my_stock.display_order_book())
+time.sleep(2)
+order_book = my_stock.display_order_book()
+trade_history = my_stock.display_trade_history(False)
+
+ob_df = pd.DataFrame(order_book)
+ob_table = tabulate(ob_df, headers='keys', tablefmt='fancy_grid')
+
+th_df = pd.DataFrame(trade_history)
+th_table = tabulate(th_df, headers='keys', tablefmt='fancy_grid')
+
+print("ORDER BOOK:")
+print(ob_table)
+
+print("TRADE HISTORY:")
+print(th_table)
