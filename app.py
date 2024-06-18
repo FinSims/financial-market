@@ -2,43 +2,31 @@ import pandas as pd
 from tabulate import tabulate
 from datetime import datetime
 import time
+import uuid
 
 
 class Security:
+    _instances = {}
+
+    def __new__(cls, symbol, *args, **kwargs):
+        if symbol not in cls._instances:
+            instance = super().__new__(cls)
+            cls._instances[symbol] = instance
+        return cls._instances[symbol]
+
     def __init__(self, ticker):
-        self.ticker = ticker
-        self.buy_orders = []
-        self.sell_orders = []
-        self.trade_history = []
-        self.bid = 0
-        self.ask = 0
-        self.last = 0
+        if not hasattr(self, 'initialized'):
+            self.ticker = ticker
+            self.buy_orders = []
+            self.sell_orders = []
+            self.trade_history = []
+            self.bid = 0
+            self.ask = 0
+            self.last = 0
 
-    def create_market_order(self, side, quantity):
-        self.__update_bid_ask()
-
-        if side == "buy":
-            trade = {
-                "time": datetime.now(),
-                "ticker": self.ticker,
-                "side": side,
-                "price": self.sell_orders[0]["price"],
-                "size": quantity,
-                "type": "market"
-            }
-
-            self.execute_market_order(trade)
-        else:
-            trade = {
-                "time": datetime.now(),
-                "ticker": self.ticker,
-                "side": side,
-                "price": self.buy_orders[0]["price"],
-                "size": quantity,
-                "type": "market"
-            }
-
-            self.execute_market_order(trade)
+    @classmethod
+    def get_instance(cls, symbol):
+        return cls._instances.get(symbol, None)
 
     def __update_bid_ask(self):
         self.buy_orders.sort(key=lambda order: order["price"], reverse=True)  # sort from highest to lowest
@@ -101,41 +89,6 @@ class Security:
                 else:
                     break
 
-    def create_limit_order(self, side, price, quantity):
-        # Finds first order in which side is same and price is same, so we can add on the quantity if it exists
-        if side == "buy":
-            matching_order_index = next(
-                (i for i, order in enumerate(self.buy_orders) if order["price"] == price), None)
-
-            if matching_order_index:
-                self.buy_orders[matching_order_index]["size"] += quantity
-            else:
-                self.buy_orders.append({
-                    "time": datetime.now(),
-                    "ticker": self.ticker,
-                    "side": side,
-                    "price": price,
-                    "size": quantity,
-                    "type": "limit"
-                })
-        else:
-            matching_order_index = next(
-                (i for i, order in enumerate(self.sell_orders) if order["price"] == price), None)
-
-            if matching_order_index:
-                self.sell_orders[matching_order_index]["size"] += quantity
-            else:
-                self.sell_orders.append({
-                    "time": datetime.now(),
-                    "ticker": self.ticker,
-                    "side": side,
-                    "price": price,
-                    "size": quantity,
-                    "type": "limit"
-                })
-
-        self.execute_limit_order()
-
     def execute_limit_order(self):
         # buy_orders and sell_orders are sorted appropriately
         self.__update_bid_ask()
@@ -190,16 +143,96 @@ class Security:
         return self.trade_history
 
 
+class Trader:
+    def __init__(self):
+        self.id = uuid.uuid4()
+
+    def create_market_order(self, ticker, side, quantity):
+        instrument = Security.get_instance(ticker)
+
+        if instrument is None:
+            instrument = Security(ticker)
+        instrument.__update_bid_ask()
+
+        if side == "buy":
+            trade = {
+                "trader": self.id,
+                "time": datetime.now(),
+                "ticker": ticker,
+                "side": side,
+                "price": instrument.sell_orders[0]["price"],
+                "size": quantity,
+                "type": "market"
+            }
+
+            instrument.execute_market_order(trade)
+        else:
+            trade = {
+                "trader": self.id,
+                "time": datetime.now(),
+                "ticker": ticker,
+                "side": side,
+                "price": instrument.buy_orders[0]["price"],
+                "size": quantity,
+                "type": "market"
+            }
+
+            instrument.execute_market_order(trade)
+
+    def create_limit_order(self, ticker, side, price, quantity):
+        instrument = Security.get_instance(ticker)
+
+        if instrument is None:
+            instrument = Security(ticker)
+
+        # Finds first order in which side is same and price is same, so we can add on the quantity if it exists
+        if side == "buy":
+            matching_order_index = next(
+                (i for i, order in enumerate(instrument.buy_orders) if order["price"] == price), None)
+
+            if matching_order_index:
+                instrument.buy_orders[matching_order_index]["size"] += quantity
+            else:
+                instrument.buy_orders.append({
+                    "trader": self.id,
+                    "time": datetime.now(),
+                    "ticker": ticker,
+                    "side": side,
+                    "price": price,
+                    "size": quantity,
+                    "type": "limit"
+                })
+        else:
+            matching_order_index = next(
+                (i for i, order in enumerate(instrument.sell_orders) if order["price"] == price), None)
+
+            if matching_order_index:
+                instrument.sell_orders[matching_order_index]["size"] += quantity
+            else:
+                instrument.sell_orders.append({
+                    "trader": self.id,
+                    "time": datetime.now(),
+                    "ticker": ticker,
+                    "side": side,
+                    "price": price,
+                    "size": quantity,
+                    "type": "limit"
+                })
+
+        instrument.execute_limit_order()
+
+
 my_stock = Security("AAPL")
+trader = Trader()
 # print(my_stock.order_book)
-my_stock.create_limit_order("buy", 102.0, 17)
-time.sleep(2)
-my_stock.create_limit_order("sell", 101.0, 7)
-time.sleep(2)
-my_stock.create_limit_order("sell", 101.0, 2)
-time.sleep(2)
-my_stock.create_limit_order("sell", 100.0, 2)
-time.sleep(2)
+trader.create_limit_order("AAPL", "buy", 102.0, 17)
+time.sleep(1)
+trader.create_limit_order("AAPL", "sell", 101.0, 7)
+time.sleep(1)
+trader.create_limit_order("AAPL", "sell", 101.0, 2)
+time.sleep(1)
+trader.create_limit_order("AAPL", "sell", 100.0, 2)
+time.sleep(1)
 order_book = my_stock.display_order_book()
 trade_history = my_stock.display_trade_history(False)
 
