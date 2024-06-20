@@ -3,11 +3,13 @@ from tabulate import tabulate
 from datetime import datetime
 import time
 import uuid
+from typing import Optional
 
 
 class Security:
     _instances = {}
 
+    # Ensures when creating a new instance that the ticker is not already created
     def __new__(cls, symbol, *args, **kwargs):
         if symbol not in cls._instances:
             instance = super().__new__(cls)
@@ -19,7 +21,6 @@ class Security:
             self.ticker = ticker
             self.buy_orders = []
             self.sell_orders = []
-            self.trade_history = []
             self.bid = 0
             self.ask = 0
             self.last = 0
@@ -57,10 +58,17 @@ class Security:
 
                 trade_price = sell_order["price"]
                 trade_quantity = min(trade["size"], sell_order["size"])
-                self.trade_history.append(
-                    {"time": datetime.now(), "type": "buy", "price": trade_price, "quantity": trade_quantity})
+
                 trade["size"] -= trade_quantity
                 sell_order["size"] -= trade_quantity
+
+                if trade["size"] == 0:
+                    buy_trader = Trader.search_by_id(trade["trader"])
+                    buy_trader.update_portfolio(trade["ticker"], "buy", trade_quantity, trade_price)
+
+                if sell_order["size"] == 0:
+                    sell_trader = Trader.search_by_id(sell_order["trader"])
+                    sell_trader.update_portfolio(sell_order["ticker"], "buy", trade_quantity, trade_price)
 
                 # If the buy market order isn't fully filled yet, we'll move up the sellers
                 if sell_order["size"] == 0 and trade["size"] > 0:
@@ -78,10 +86,17 @@ class Security:
 
                 trade_price = buy_order["price"]
                 trade_quantity = min(buy_order["size"], trade["size"])
-                self.trade_history.append(
-                    {"time": datetime.now(), "type": "sell", "price": trade_price, "quantity": trade_quantity})
+
                 buy_order["size"] -= trade_quantity
                 trade["size"] -= trade_quantity
+
+                if buy_order["size"] == 0:
+                    buy_trader = Trader.search_by_id(buy_order["trader"])
+                    buy_trader.update_portfolio(buy_order["ticker"], "buy", trade_quantity, trade_price)
+
+                if trade["size"] == 0:
+                    sell_trader = Trader.search_by_id(trade["trader"])
+                    sell_trader.update_portfolio(trade["ticker"], "sell", trade_quantity, trade_price)
 
                 # If the sell market order isn't fully filled yet, we'll move down the buyers
                 if buy_order["size"] == 0 and trade["size"] > 0:
@@ -116,10 +131,16 @@ class Security:
                     trade_price = sell_order["price"]
 
                 trade_quantity = min(buy_order["size"], sell_order["size"])
-                self.trade_history.append(
-                    {"time": datetime.now(), "type": "buy", "price": trade_price, "quantity": trade_quantity})
                 buy_order["size"] -= trade_quantity
                 sell_order["size"] -= trade_quantity
+
+                if buy_order["size"] == 0:
+                    buy_trader = Trader.search_by_id(buy_order["trader"])
+                    buy_trader.update_portfolio(buy_order["ticker"], "buy", trade_quantity, trade_price)
+
+                if sell_order["size"] == 0:
+                    sell_trader = Trader.search_by_id(sell_order["trader"])
+                    sell_trader.update_portfolio(sell_order["ticker"], "sell", trade_quantity, trade_price)
 
                 # If this buy order is overpaying, and they still have shares left, there is a possibility they can
                 # get the rest of their shares filled, so we'll move up the sellers list
@@ -134,6 +155,54 @@ class Security:
     def display_order_book(self):
         return self.buy_orders + self.sell_orders
 
+
+class Trader:
+    _instances = []
+
+    def __init__(self):
+        self.id = uuid.uuid4()
+        self.portfolio = []
+        self.trade_history = []
+        Trader._instances.append(self)
+
+    @classmethod
+    def search_by_id(cls, class_id) -> Optional['Trader']:
+        for instance in cls._instances:
+            if instance.id == class_id:
+                return instance
+        return None
+
+    def update_portfolio(self, ticker, side, quantity, price):
+        self.trade_history.append({
+            "time": datetime.now(),
+            "ticker": ticker,
+            "type": side,
+            "price": price,
+            "quantity": quantity
+        })
+
+        # Finds if the trader already owns the stock in their portfolio
+        portfolio_stock = next((stock for stock in self.portfolio if stock["ticker"] == ticker), None)
+        if side == "buy":
+            if portfolio_stock is None:
+                self.portfolio.append({
+                    "ticker": ticker,
+                    "size": quantity,
+                    "avg_price": price
+                })
+            else:
+                new_avg_price = ((portfolio_stock["avg_price"] * portfolio_stock["size"]) + (price * quantity)) / (
+                        portfolio_stock["size"] + quantity)
+                portfolio_stock["avg_price"] = new_avg_price
+                portfolio_stock["size"] += quantity
+        else:
+            if portfolio_stock and portfolio_stock["size"] >= quantity:
+                portfolio_stock["size"] -= quantity
+                if portfolio_stock["size"] == 0:
+                    portfolio_stock["avg_price"] = 0
+            else:
+                print("Not enough stock to sell")
+
     def display_trade_history(self, ascending):
         if ascending:
             self.trade_history.sort(key=lambda x: x["time"])
@@ -141,11 +210,6 @@ class Security:
             self.trade_history.sort(key=lambda x: x["time"], reverse=True)
 
         return self.trade_history
-
-
-class Trader:
-    def __init__(self):
-        self.id = uuid.uuid4()
 
     def create_market_order(self, ticker, side, quantity):
         instrument = Security.get_instance(ticker)
@@ -166,6 +230,7 @@ class Trader:
             }
 
             instrument.execute_market_order(trade)
+            # self.update_portfolio(ticker, side, quantity, price)
         else:
             trade = {
                 "trader": self.id,
@@ -178,6 +243,7 @@ class Trader:
             }
 
             instrument.execute_market_order(trade)
+            # self.update_portfolio(ticker, side, quantity, price)
 
     def create_limit_order(self, ticker, side, price, quantity):
         instrument = Security.get_instance(ticker)
@@ -234,7 +300,7 @@ time.sleep(1)
 trader.create_limit_order("AAPL", "sell", 100.0, 2)
 time.sleep(1)
 order_book = my_stock.display_order_book()
-trade_history = my_stock.display_trade_history(False)
+trade_history = trader.display_trade_history(False)
 
 ob_df = pd.DataFrame(order_book)
 ob_table = tabulate(ob_df, headers='keys', tablefmt='fancy_grid')
