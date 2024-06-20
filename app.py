@@ -159,10 +159,12 @@ class Security:
 class Trader:
     _instances = []
 
-    def __init__(self):
+    def __init__(self, shorting):
         self.id = uuid.uuid4()
         self.portfolio = []
         self.trade_history = []
+        # Whether the trader can short sell stocks
+        self.shorting = shorting
         Trader._instances.append(self)
 
     @classmethod
@@ -171,6 +173,11 @@ class Trader:
             if instance.id == class_id:
                 return instance
         return None
+
+    # Finds the given stock in the trader's portfolio
+    def find_stock(self, ticker):
+        portfolio_stock = next((stock for stock in self.portfolio if stock["ticker"] == ticker), None)
+        return portfolio_stock
 
     def update_portfolio(self, ticker, side, quantity, price):
         self.trade_history.append({
@@ -182,7 +189,8 @@ class Trader:
         })
 
         # Finds if the trader already owns the stock in their portfolio
-        portfolio_stock = next((stock for stock in self.portfolio if stock["ticker"] == ticker), None)
+        portfolio_stock = self.find_stock(ticker)
+
         if side == "buy":
             if portfolio_stock is None:
                 self.portfolio.append({
@@ -196,12 +204,20 @@ class Trader:
                 portfolio_stock["avg_price"] = new_avg_price
                 portfolio_stock["size"] += quantity
         else:
-            if portfolio_stock and portfolio_stock["size"] >= quantity:
-                portfolio_stock["size"] -= quantity
-                if portfolio_stock["size"] == 0:
-                    portfolio_stock["avg_price"] = 0
+            if portfolio_stock:
+                if self.shorting is True or portfolio_stock["size"] >= quantity:
+                    portfolio_stock["size"] -= quantity
+                    if portfolio_stock["size"] == 0:
+                        portfolio_stock["avg_price"] = 0
             else:
-                print("Not enough stock to sell")
+                if self.shorting is True:
+                    self.portfolio.append({
+                        "ticker": ticker,
+                        "size": quantity * -1,
+                        "avg_price": price
+                    })
+                else:
+                    print("Not enough stock to sell")
 
     def display_trade_history(self, ascending):
         if ascending:
@@ -230,20 +246,23 @@ class Trader:
             }
 
             instrument.execute_market_order(trade)
-            # self.update_portfolio(ticker, side, quantity, price)
         else:
-            trade = {
-                "trader": self.id,
-                "time": datetime.now(),
-                "ticker": ticker,
-                "side": side,
-                "price": instrument.buy_orders[0]["price"],
-                "size": quantity,
-                "type": "market"
-            }
+            portfolio_stock = self.find_stock(ticker)
 
-            instrument.execute_market_order(trade)
-            # self.update_portfolio(ticker, side, quantity, price)
+            if portfolio_stock is not None and portfolio_stock["size"] < quantity and self.shorting is False:
+                print("Error: Order not accepted. Not enough stock to sell. Short selling is disabled.")
+            else:
+                trade = {
+                    "trader": self.id,
+                    "time": datetime.now(),
+                    "ticker": ticker,
+                    "side": side,
+                    "price": instrument.buy_orders[0]["price"],
+                    "size": quantity,
+                    "type": "market"
+                }
+
+                instrument.execute_market_order(trade)
 
     def create_limit_order(self, ticker, side, price, quantity):
         instrument = Security.get_instance(ticker)
@@ -269,38 +288,48 @@ class Trader:
                     "type": "limit"
                 })
         else:
-            matching_order_index = next(
-                (i for i, order in enumerate(instrument.sell_orders) if order["price"] == price), None)
+            portfolio_stock = self.find_stock(ticker)
 
-            if matching_order_index:
-                instrument.sell_orders[matching_order_index]["size"] += quantity
+            if (portfolio_stock is None and self.shorting is False) or (
+                    portfolio_stock is not None and portfolio_stock["size"] < quantity and self.shorting is False):
+                print("Error: Order not accepted. Not enough stock to sell. Short selling is disabled.")
             else:
-                instrument.sell_orders.append({
-                    "trader": self.id,
-                    "time": datetime.now(),
-                    "ticker": ticker,
-                    "side": side,
-                    "price": price,
-                    "size": quantity,
-                    "type": "limit"
-                })
+                matching_order_index = next(
+                    (i for i, order in enumerate(instrument.sell_orders) if order["price"] == price), None)
+
+                if matching_order_index:
+                    instrument.sell_orders[matching_order_index]["size"] += quantity
+                else:
+                    instrument.sell_orders.append({
+                        "trader": self.id,
+                        "time": datetime.now(),
+                        "ticker": ticker,
+                        "side": side,
+                        "price": price,
+                        "size": quantity,
+                        "type": "limit"
+                    })
 
         instrument.execute_limit_order()
 
 
 my_stock = Security("AAPL")
-trader = Trader()
+trader = Trader(False)
+another_trader = Trader(False)
 # print(my_stock.order_book)
 trader.create_limit_order("AAPL", "buy", 102.0, 17)
 time.sleep(1)
-trader.create_limit_order("AAPL", "sell", 101.0, 7)
-time.sleep(1)
-trader.create_limit_order("AAPL", "sell", 101.0, 2)
-time.sleep(1)
-trader.create_limit_order("AAPL", "sell", 100.0, 2)
-time.sleep(1)
+another_trader.create_limit_order("AAPL", "sell", 101.0, 7)
+# time.sleep(1)
+# trader.create_limit_order("AAPL", "sell", 101.0, 2)
+# time.sleep(1)
+# trader.create_limit_order("AAPL", "sell", 100.0, 2)
+# time.sleep(1)
 order_book = my_stock.display_order_book()
-trade_history = trader.display_trade_history(False)
+trade_history = another_trader.display_trade_history(False)
+portfolio = trader.portfolio
+
+# TODO: If the trade is partially filled, still show the partially filled shares in the portfolio
 
 ob_df = pd.DataFrame(order_book)
 ob_table = tabulate(ob_df, headers='keys', tablefmt='fancy_grid')
@@ -308,8 +337,14 @@ ob_table = tabulate(ob_df, headers='keys', tablefmt='fancy_grid')
 th_df = pd.DataFrame(trade_history)
 th_table = tabulate(th_df, headers='keys', tablefmt='fancy_grid')
 
+port_df = pd.DataFrame(portfolio)
+port_table = tabulate(port_df, headers='keys', tablefmt='fancy_grid')
+
 print("ORDER BOOK:")
 print(ob_table)
 
 print("TRADE HISTORY:")
 print(th_table)
+
+print("PORTFOLIO:")
+print(port_table)
