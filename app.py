@@ -34,12 +34,12 @@ class Security:
         self.sell_orders.sort(key=lambda order: order["price"], reverse=False)  # sort from lowest to highest
 
         if len(self.buy_orders) > 0:
-            self.bid = max(self.buy_orders, key=lambda x: x['price'])
+            self.bid = max(self.buy_orders, key=lambda x: x['price'])["price"]
         else:
             self.bid = 0
 
         if len(self.sell_orders) > 0:
-            self.ask = min(self.sell_orders, key=lambda x: x['price'])
+            self.ask = min(self.sell_orders, key=lambda x: x['price'])["price"]
         else:
             self.ask = 0
 
@@ -317,6 +317,7 @@ class Trader:
 
 my_stock = Security("AAPL")
 trader = Trader(False)
+
 another_trader = Trader(True)
 # print(my_stock.order_book)
 trader.create_limit_order("AAPL", "buy", 102.0, 17)
@@ -330,6 +331,7 @@ another_trader.create_limit_order("AAPL", "sell", 101.0, 7)
 order_book = my_stock.display_order_book()
 trade_history = another_trader.display_trade_history(False)
 portfolio = trader.portfolio
+# print(my_stock.ask)
 
 
 ob_df = pd.DataFrame(order_book)
