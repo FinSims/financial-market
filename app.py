@@ -62,13 +62,11 @@ class Security:
                 trade["size"] -= trade_quantity
                 sell_order["size"] -= trade_quantity
 
-                if trade["size"] == 0:
-                    buy_trader = Trader.search_by_id(trade["trader"])
-                    buy_trader.update_portfolio(trade["ticker"], "buy", trade_quantity, trade_price)
+                buy_trader = Trader.search_by_id(trade["trader"])
+                buy_trader.update_portfolio(trade["ticker"], "buy", trade_quantity, trade_price)
 
-                if sell_order["size"] == 0:
-                    sell_trader = Trader.search_by_id(sell_order["trader"])
-                    sell_trader.update_portfolio(sell_order["ticker"], "buy", trade_quantity, trade_price)
+                sell_trader = Trader.search_by_id(sell_order["trader"])
+                sell_trader.update_portfolio(sell_order["ticker"], "buy", trade_quantity, trade_price)
 
                 # If the buy market order isn't fully filled yet, we'll move up the sellers
                 if sell_order["size"] == 0 and trade["size"] > 0:
@@ -90,13 +88,11 @@ class Security:
                 buy_order["size"] -= trade_quantity
                 trade["size"] -= trade_quantity
 
-                if buy_order["size"] == 0:
-                    buy_trader = Trader.search_by_id(buy_order["trader"])
-                    buy_trader.update_portfolio(buy_order["ticker"], "buy", trade_quantity, trade_price)
+                buy_trader = Trader.search_by_id(buy_order["trader"])
+                buy_trader.update_portfolio(buy_order["ticker"], "buy", trade_quantity, trade_price)
 
-                if trade["size"] == 0:
-                    sell_trader = Trader.search_by_id(trade["trader"])
-                    sell_trader.update_portfolio(trade["ticker"], "sell", trade_quantity, trade_price)
+                sell_trader = Trader.search_by_id(trade["trader"])
+                sell_trader.update_portfolio(trade["ticker"], "sell", trade_quantity, trade_price)
 
                 # If the sell market order isn't fully filled yet, we'll move down the buyers
                 if buy_order["size"] == 0 and trade["size"] > 0:
@@ -134,14 +130,11 @@ class Security:
                 buy_order["size"] -= trade_quantity
                 sell_order["size"] -= trade_quantity
 
-                if buy_order["size"] == 0:
-                    buy_trader = Trader.search_by_id(buy_order["trader"])
-                    buy_trader.update_portfolio(buy_order["ticker"], "buy", trade_quantity, trade_price)
+                buy_trader = Trader.search_by_id(buy_order["trader"])
+                buy_trader.update_portfolio(buy_order["ticker"], "buy", trade_quantity, trade_price)
 
-                if sell_order["size"] == 0:
-                    sell_trader = Trader.search_by_id(sell_order["trader"])
-                    sell_trader.update_portfolio(sell_order["ticker"], "sell", trade_quantity, trade_price)
-
+                sell_trader = Trader.search_by_id(sell_order["trader"])
+                sell_trader.update_portfolio(sell_order["ticker"], "sell", trade_quantity, trade_price)
                 # If this buy order is overpaying, and they still have shares left, there is a possibility they can
                 # get the rest of their shares filled, so we'll move up the sellers list
                 if sell_order["size"] == 0 and buy_order["size"] > 0 and buy_order["price"] > sell_order["price"]:
@@ -315,7 +308,7 @@ class Trader:
 
 my_stock = Security("AAPL")
 trader = Trader(False)
-another_trader = Trader(False)
+another_trader = Trader(True)
 # print(my_stock.order_book)
 trader.create_limit_order("AAPL", "buy", 102.0, 17)
 time.sleep(1)
@@ -328,8 +321,6 @@ another_trader.create_limit_order("AAPL", "sell", 101.0, 7)
 order_book = my_stock.display_order_book()
 trade_history = another_trader.display_trade_history(False)
 portfolio = trader.portfolio
-
-# TODO: If the trade is partially filled, still show the partially filled shares in the portfolio
 
 ob_df = pd.DataFrame(order_book)
 ob_table = tabulate(ob_df, headers='keys', tablefmt='fancy_grid')
