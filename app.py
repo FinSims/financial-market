@@ -152,8 +152,9 @@ class Security:
 class Trader:
     _instances = []
 
-    def __init__(self, shorting):
+    def __init__(self, shorting, balance = 0):
         self.id = uuid.uuid4()
+        self.balance = balance
         self.portfolio = []
         self.trade_history = []
         # Whether the trader can short sell stocks
@@ -305,6 +306,14 @@ class Trader:
 
         instrument.execute_limit_order()
 
+    def transaction(self, trans, stock):
+        # if trans is true - buy
+        if trans:
+            self.balance -= stock.bid
+        else:
+            self.balance += stock.ask
+
+
 
 my_stock = Security("AAPL")
 trader = Trader(False)
@@ -321,6 +330,7 @@ another_trader.create_limit_order("AAPL", "sell", 101.0, 7)
 order_book = my_stock.display_order_book()
 trade_history = another_trader.display_trade_history(False)
 portfolio = trader.portfolio
+
 
 ob_df = pd.DataFrame(order_book)
 ob_table = tabulate(ob_df, headers='keys', tablefmt='fancy_grid')
