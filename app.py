@@ -3,7 +3,7 @@ from tabulate import tabulate
 from datetime import datetime
 import time
 import uuid
-from typing import Optional
+from typing import Optional, Literal
 
 
 class Security:
@@ -59,13 +59,22 @@ class Security:
                 trade_price = sell_order["price"]
                 trade_quantity = min(trade["size"], sell_order["size"])
 
-                trade["size"] -= trade_quantity
-                sell_order["size"] -= trade_quantity
-
                 buy_trader = Trader.search_by_id(trade["trader"])
-                buy_trader.update_portfolio(trade["ticker"], "buy", trade_quantity, trade_price)
-
                 sell_trader = Trader.search_by_id(sell_order["trader"])
+
+                for i in range(trade_quantity):
+                    trade["size"] -= 1
+                    sell_order["size"] -= 1
+
+                    result = buy_trader.transaction("buy", trade["ticker"], trade_price, trade_quantity)
+
+                    if result is False:
+                        trade_quantity = i
+                        break
+
+                    sell_trader.transaction("sell", trade["ticker"], trade_price, trade_quantity)
+
+                buy_trader.update_portfolio(trade["ticker"], "buy", trade_quantity, trade_price)
                 sell_trader.update_portfolio(sell_order["ticker"], "buy", trade_quantity, trade_price)
 
                 # If the buy market order isn't fully filled yet, we'll move up the sellers
@@ -85,13 +94,22 @@ class Security:
                 trade_price = buy_order["price"]
                 trade_quantity = min(buy_order["size"], trade["size"])
 
-                buy_order["size"] -= trade_quantity
-                trade["size"] -= trade_quantity
-
                 buy_trader = Trader.search_by_id(buy_order["trader"])
-                buy_trader.update_portfolio(buy_order["ticker"], "buy", trade_quantity, trade_price)
-
                 sell_trader = Trader.search_by_id(trade["trader"])
+
+                for i in range(trade_quantity):
+                    trade["size"] -= 1
+                    buy_order["size"] -= 1
+
+                    result = buy_trader.transaction("buy", trade["ticker"], trade_price, trade_quantity)
+
+                    if result is False:
+                        trade_quantity = i
+                        break
+
+                    sell_trader.transaction("sell", trade["ticker"], trade_price, trade_quantity)
+
+                buy_trader.update_portfolio(buy_order["ticker"], "buy", trade_quantity, trade_price)
                 sell_trader.update_portfolio(trade["ticker"], "sell", trade_quantity, trade_price)
 
                 # If the sell market order isn't fully filled yet, we'll move down the buyers
@@ -127,14 +145,25 @@ class Security:
                     trade_price = sell_order["price"]
 
                 trade_quantity = min(buy_order["size"], sell_order["size"])
-                buy_order["size"] -= trade_quantity
-                sell_order["size"] -= trade_quantity
 
                 buy_trader = Trader.search_by_id(buy_order["trader"])
-                buy_trader.update_portfolio(buy_order["ticker"], "buy", trade_quantity, trade_price)
-
                 sell_trader = Trader.search_by_id(sell_order["trader"])
+
+                for i in range(trade_quantity):
+                    buy_order["size"] -= 1
+                    sell_order["size"] -= 1
+
+                    result = buy_trader.transaction("buy", buy_order["ticker"], trade_price, trade_quantity)
+
+                    if result is False:
+                        trade_quantity = i
+                        break
+
+                    sell_trader.transaction("sell", sell_order["ticker"], trade_price, trade_quantity)
+
+                buy_trader.update_portfolio(buy_order["ticker"], "buy", trade_quantity, trade_price)
                 sell_trader.update_portfolio(sell_order["ticker"], "sell", trade_quantity, trade_price)
+
                 # If this buy order is overpaying, and they still have shares left, there is a possibility they can
                 # get the rest of their shares filled, so we'll move up the sellers list
                 if sell_order["size"] == 0 and buy_order["size"] > 0 and buy_order["price"] > sell_order["price"]:
@@ -306,19 +335,21 @@ class Trader:
 
         instrument.execute_limit_order()
 
-    def transaction(self, trans, stock):
-        # if trans is true - buy
-        if trans:
-            self.balance -= stock.bid
+    def transaction(self, side, ticker, price, quantity):
+        # stock = Security.get_instance(ticker)
+        if side == "buy":
+            if self.balance >= price:
+                self.balance -= price
+            else:
+                print("Not enough funds to buy all " + str(quantity) + " shares of stock " + ticker)
+                return False
         else:
-            self.balance += stock.ask
-
+            self.balance += price
 
 
 my_stock = Security("AAPL")
-trader = Trader(False)
-
-another_trader = Trader(True)
+trader = Trader(False, 110)
+another_trader = Trader(True, 130)
 # print(my_stock.order_book)
 trader.create_limit_order("AAPL", "buy", 102.0, 17)
 time.sleep(1)
@@ -333,6 +364,8 @@ trade_history = another_trader.display_trade_history(False)
 portfolio = trader.portfolio
 # print(my_stock.ask)
 
+print("Buyer's balance:", trader.balance)
+print("Seller's balance:", another_trader.balance)
 
 ob_df = pd.DataFrame(order_book)
 ob_table = tabulate(ob_df, headers='keys', tablefmt='fancy_grid')
@@ -343,7 +376,7 @@ th_table = tabulate(th_df, headers='keys', tablefmt='fancy_grid')
 port_df = pd.DataFrame(portfolio)
 port_table = tabulate(port_df, headers='keys', tablefmt='fancy_grid')
 
-print("ORDER BOOK:")
+print("\nORDER BOOK:")
 print(ob_table)
 
 print("TRADE HISTORY:")
