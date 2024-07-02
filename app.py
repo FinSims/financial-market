@@ -77,6 +77,8 @@ class Security:
                 buy_trader.update_portfolio(trade["ticker"], "buy", trade_quantity, trade_price)
                 sell_trader.update_portfolio(sell_order["ticker"], "buy", trade_quantity, trade_price)
 
+                self.last = trade_price
+
                 # If the buy market order isn't fully filled yet, we'll move up the sellers
                 if sell_order["size"] == 0 and trade["size"] > 0:
                     sell_index += 1
@@ -111,6 +113,8 @@ class Security:
 
                 buy_trader.update_portfolio(buy_order["ticker"], "buy", trade_quantity, trade_price)
                 sell_trader.update_portfolio(trade["ticker"], "sell", trade_quantity, trade_price)
+
+                self.last = trade_price
 
                 # If the sell market order isn't fully filled yet, we'll move down the buyers
                 if buy_order["size"] == 0 and trade["size"] > 0:
@@ -163,6 +167,8 @@ class Security:
 
                 buy_trader.update_portfolio(buy_order["ticker"], "buy", trade_quantity, trade_price)
                 sell_trader.update_portfolio(sell_order["ticker"], "sell", trade_quantity, trade_price)
+
+                self.last = trade_price
 
                 # If this buy order is overpaying, and they still have shares left, there is a possibility they can
                 # get the rest of their shares filled, so we'll move up the sellers list
@@ -351,10 +357,12 @@ class Trader:
         # check if initial balance is 0
         init_balance = float(self.init_balance) if self.init_balance != 0 else .01
         balance = self.balance
+
         if balance == init_balance:
             return 0
         else:
             return ((balance - init_balance) / init_balance) * 100
+
 
 my_stock = Security("AAPL")
 trader = Trader(False, 110)
