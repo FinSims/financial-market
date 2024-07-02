@@ -181,9 +181,10 @@ class Security:
 class Trader:
     _instances = []
 
-    def __init__(self, shorting, balance = 0):
+    def __init__(self, shorting, balance=0):
         self.id = uuid.uuid4()
         self.balance = balance
+        self.init_balance = balance
         self.portfolio = []
         self.trade_history = []
         # Whether the trader can short sell stocks
@@ -346,6 +347,14 @@ class Trader:
         else:
             self.balance += price
 
+    def percent_change(self):
+        # check if initial balance is 0
+        init_balance = float(self.init_balance) if self.init_balance != 0 else .01
+        balance = self.balance
+        if balance == init_balance:
+            return 0
+        else:
+            return ((balance - init_balance) / init_balance) * 100
 
 my_stock = Security("AAPL")
 trader = Trader(False, 110)
