@@ -4,6 +4,7 @@ from datetime import datetime
 import time
 import uuid
 from typing import Optional, Literal
+import matplotlib.pyplot as plt
 
 
 class Security:
@@ -23,7 +24,7 @@ class Security:
             self.sell_orders = []
             self.bid = 0
             self.ask = 0
-            self.last = 0
+            self.last = []
 
     @classmethod
     def get_instance(cls, symbol):
@@ -74,10 +75,15 @@ class Security:
 
                     sell_trader.transaction("sell", trade["ticker"], trade_price, trade_quantity)
 
-                buy_trader.update_portfolio(trade["ticker"], "buy", trade_quantity, trade_price)
-                sell_trader.update_portfolio(sell_order["ticker"], "buy", trade_quantity, trade_price)
+                timestamp = datetime.now()
 
-                self.last = trade_price
+                buy_trader.update_portfolio(trade["ticker"], timestamp, "buy", trade_quantity, trade_price)
+                sell_trader.update_portfolio(sell_order["ticker"], timestamp, "buy", trade_quantity, trade_price)
+
+                self.last.append({
+                    "timestamp": timestamp,
+                    "price": trade_price
+                })
 
                 # If the buy market order isn't fully filled yet, we'll move up the sellers
                 if sell_order["size"] == 0 and trade["size"] > 0:
@@ -111,10 +117,14 @@ class Security:
 
                     sell_trader.transaction("sell", trade["ticker"], trade_price, trade_quantity)
 
-                buy_trader.update_portfolio(buy_order["ticker"], "buy", trade_quantity, trade_price)
-                sell_trader.update_portfolio(trade["ticker"], "sell", trade_quantity, trade_price)
+                timestamp = datetime.now()
+                buy_trader.update_portfolio(buy_order["ticker"], timestamp, "buy", trade_quantity, trade_price)
+                sell_trader.update_portfolio(trade["ticker"], timestamp, "sell", trade_quantity, trade_price)
 
-                self.last = trade_price
+                self.last.append({
+                    "timestamp": timestamp,
+                    "price": trade_price
+                })
 
                 # If the sell market order isn't fully filled yet, we'll move down the buyers
                 if buy_order["size"] == 0 and trade["size"] > 0:
@@ -138,6 +148,14 @@ class Security:
 
             if buy_order is None or sell_order is None:
                 break
+
+            if buy_order["size"] == 0:
+                buy_index += 1
+                continue
+
+            if sell_order["size"] == 0:
+                sell_index += 1
+                continue
 
             # If the buy order is greater than or equal than the sell order
             if buy_order["price"] >= sell_order["price"]:
@@ -165,10 +183,17 @@ class Security:
 
                     sell_trader.transaction("sell", sell_order["ticker"], trade_price, trade_quantity)
 
-                buy_trader.update_portfolio(buy_order["ticker"], "buy", trade_quantity, trade_price)
-                sell_trader.update_portfolio(sell_order["ticker"], "sell", trade_quantity, trade_price)
+                timestamp = datetime.now()
 
-                self.last = trade_price
+                print(trade_price, buy_order, sell_order)
+
+                buy_trader.update_portfolio(buy_order["ticker"], timestamp, "buy", trade_quantity, trade_price)
+                sell_trader.update_portfolio(sell_order["ticker"], timestamp, "sell", trade_quantity, trade_price)
+
+                self.last.append({
+                    "timestamp": timestamp,
+                    "price": trade_price
+                })
 
                 # If this buy order is overpaying, and they still have shares left, there is a possibility they can
                 # get the rest of their shares filled, so we'll move up the sellers list
@@ -209,9 +234,9 @@ class Trader:
         portfolio_stock = next((stock for stock in self.portfolio if stock["ticker"] == ticker), None)
         return portfolio_stock
 
-    def update_portfolio(self, ticker, side, quantity, price):
+    def update_portfolio(self, ticker, timestamp, side, quantity, price):
         self.trade_history.append({
-            "time": datetime.now(),
+            "time": timestamp,
             "ticker": ticker,
             "type": side,
             "price": price,
@@ -364,13 +389,37 @@ class Trader:
             return ((balance - init_balance) / init_balance) * 100
 
 
+def plot_security_prices(security):
+    timestamps = [entry["timestamp"] for entry in security.last]
+    prices = [entry["price"] for entry in security.last]
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(timestamps, prices, marker='o')
+    plt.title(f"Price History of {security.ticker}")
+    plt.xlabel("Timestamp")
+    plt.ylabel("Price")
+    plt.grid(True)
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.show()
+
+
+# ! Important: Bug with calculating average price when shorting and covering back shares
 my_stock = Security("AAPL")
-trader = Trader(False, 110)
-another_trader = Trader(True, 130)
+trader = Trader(False, 1100000)
+another_trader = Trader(True, 1300000)
 # print(my_stock.order_book)
 trader.create_limit_order("AAPL", "buy", 102.0, 17)
 time.sleep(1)
 another_trader.create_limit_order("AAPL", "sell", 101.0, 7)
+time.sleep(1)
+trader.create_limit_order("AAPL", "buy", 103.0, 7)
+time.sleep(1)
+another_trader.create_limit_order("AAPL", "sell", 103.0, 7)
+time.sleep(1)
+trader.create_limit_order("AAPL", "buy", 105.0, 7)
+time.sleep(1)
+another_trader.create_limit_order("AAPL", "sell", 104.0, 7)
 # time.sleep(1)
 # trader.create_limit_order("AAPL", "sell", 101.0, 2)
 # time.sleep(1)
@@ -401,3 +450,7 @@ print(th_table)
 
 print("PORTFOLIO:")
 print(port_table)
+
+print(my_stock.last)
+
+plot_security_prices(my_stock)
