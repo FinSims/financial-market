@@ -37,6 +37,9 @@ time.sleep(1)
 trader.create_limit_order("AAPL", "buy", 105.0, 7)
 time.sleep(1)
 another_trader.create_limit_order("AAPL", "sell", 104.0, 7)
+time.sleep(1)
+another_trader.create_limit_order("AAPL", "buy", 92.0, 5)
+trader.create_limit_order("AAPL", "sell", 92.0, 3)
 # time.sleep(1)
 # trader.create_limit_order("AAPL", "sell", 101.0, 2)
 # time.sleep(1)
@@ -44,7 +47,7 @@ another_trader.create_limit_order("AAPL", "sell", 104.0, 7)
 # time.sleep(1)
 order_book = my_stock.display_order_book()
 trade_history = another_trader.display_trade_history(False)
-portfolio = trader.portfolio
+portfolio = another_trader.portfolio
 # print(my_stock.ask)
 
 print("Buyer's balance:", trader.balance)

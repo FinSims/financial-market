@@ -40,33 +40,49 @@ class Trader:
         # Finds if the trader already owns the stock in their portfolio
         portfolio_stock = self.find_stock(ticker)
 
-        if side == "buy":
-            if portfolio_stock is None:
-                self.portfolio.append({
-                    "ticker": ticker,
-                    "size": quantity,
-                    "avg_price": price
-                })
-            else:
-                new_avg_price = ((portfolio_stock["avg_price"] * portfolio_stock["size"]) + (price * quantity)) / (
-                        portfolio_stock["size"] + quantity)
-                portfolio_stock["avg_price"] = new_avg_price
-                portfolio_stock["size"] += quantity
-        else:
-            if portfolio_stock:
-                if self.shorting is True or portfolio_stock["size"] >= quantity:
-                    portfolio_stock["size"] -= quantity
-                    if portfolio_stock["size"] == 0:
-                        portfolio_stock["avg_price"] = 0
-            else:
-                if self.shorting is True:
-                    self.portfolio.append({
-                        "ticker": ticker,
-                        "size": quantity * -1,
-                        "avg_price": price
-                    })
-                else:
-                    print("Not enough stock to sell")
+        # if side == "buy":
+        #     if portfolio_stock is None:
+        #         self.portfolio.append({
+        #             "ticker": ticker,
+        #             "size": quantity,
+        #             "avg_price": price
+        #         })
+        #     else:
+        #         # If we already own shares of it
+        #         if portfolio_stock["size"] > 0:
+        #             new_avg_price = ((portfolio_stock["avg_price"] * portfolio_stock["size"]) + (price * quantity)) / (
+        #                     portfolio_stock["size"] + quantity)
+        #             portfolio_stock["avg_price"] = new_avg_price
+        #             portfolio_stock["size"] += quantity
+        #         else:
+        #             # If we are covering back a short as quantity is in negatives
+        #             portfolio_stock["size"] += quantity
+        # else:  # If we're selling
+        #     quantity *= -1
+        #     print(portfolio_stock)
+        #     if portfolio_stock is not None:
+        #         if self.shorting is True and portfolio_stock["size"] < 0:
+        #             # If we are already shorting some shares, we'll calculate new average price
+        #             new_avg_price = ((portfolio_stock["avg_price"] * portfolio_stock["size"]) + (price * quantity)) / (
+        #                     portfolio_stock["size"] + quantity)
+        #             portfolio_stock["avg_price"] = new_avg_price
+        #             portfolio_stock["size"] -= quantity
+        #         elif portfolio_stock["size"] > 0 and portfolio_stock["size"] >= quantity:
+        #             portfolio_stock["size"] -= quantity
+        #             # if portfolio_stock["size"] == 0:
+        #             #     portfolio_stock["avg_price"] = 0
+        #         elif self.shorting is False and portfolio_stock["size"] < quantity:
+        #             # If we are trying to sell more than we already own...
+        #             print("Not enough stock to sell")
+        #     else:  # We don't already own the shares
+        #         if self.shorting is True:
+        #             self.portfolio.append({
+        #                 "ticker": ticker,
+        #                 "size": quantity * -1,
+        #                 "avg_price": price
+        #             })
+        #         else:
+        #             print("Not enough stock to sell")
 
     def display_trade_history(self, ascending):
         if ascending:
@@ -82,7 +98,7 @@ class Trader:
 
         if instrument is None:
             instrument = Security(ticker)
-        instrument.__update_bid_ask()
+        instrument.update_bid_ask()
 
         if side == "buy":
             trade = {
@@ -161,18 +177,69 @@ class Trader:
                         "type": "limit"
                     })
 
-        instrument.execute_limit_order()
+        instrument.execute_limit_order(side)
 
     def transaction(self, side, ticker, price, quantity):
         # stock = Security.get_instance(ticker)
+        # Finds if the trader already owns the stock in their portfolio
+        portfolio_stock = self.find_stock(ticker)
+
         if side == "buy":
             if self.balance >= price:
-                self.balance -= price
+                if portfolio_stock is None:
+                    self.portfolio.append({
+                        "ticker": ticker,
+                        "size": 1,
+                        "avg_price": price
+                    })
+
+                    self.balance -= price
+                else:
+                    # If we already own shares of it
+                    if portfolio_stock["size"] > 0:
+                        new_avg_price = ((portfolio_stock["avg_price"] * portfolio_stock["size"]) + (
+                                    price * 1)) / (
+                                                portfolio_stock["size"] + 1)
+                        portfolio_stock["avg_price"] = new_avg_price
+                        portfolio_stock["size"] += 1
+                        self.balance -= price
+                    else:
+                        # If we are covering back a short as quantity is in negatives
+                        portfolio_stock["size"] += 1
+                        self.balance -= price
             else:
-                print("Not enough funds to buy all " + str(quantity) + " shares of stock " + ticker)
+                print("Error: Order not accepted. Not enough funds to buy all " + str(quantity) + " shares of stock " +
+                      ticker)
                 return False
         else:
-            self.balance += price
+            if portfolio_stock is not None:
+                if self.shorting is True and portfolio_stock["size"] < 0:
+                    # If we are already shorting some shares, we'll calculate new average price
+                    new_avg_price = ((portfolio_stock["avg_price"] * abs(portfolio_stock["size"])) + (price * 1)) / (
+                            abs(portfolio_stock["size"]) + 1)
+                    portfolio_stock["avg_price"] = new_avg_price
+                    portfolio_stock["size"] -= 1
+                    self.balance += price
+                elif portfolio_stock["size"] >= 1:
+                    portfolio_stock["size"] -= 1
+                    self.balance += price
+                    # if portfolio_stock["size"] == 0:
+                    #     portfolio_stock["avg_price"] = 0
+                elif self.shorting is False and portfolio_stock["size"] < 1:
+                    # If we are trying to sell more than we already own...
+                    print("Error: Order not accepted. Short selling is disabled.")
+                    return False
+            else:  # We don't already own the shares
+                if self.shorting is True:
+                    self.portfolio.append({
+                        "ticker": ticker,
+                        "size": -1,
+                        "avg_price": price
+                    })
+                    self.balance += price
+                else:
+                    print("Error: Order not accepted. No shares of " + ticker + " already owned in portfolio.")
+                    return False
 
     def percent_change(self):
         # check if initial balance is 0

@@ -24,7 +24,7 @@ class Security:
     def get_instance(cls, symbol):
         return cls._instances.get(symbol, None)
 
-    def __update_bid_ask(self):
+    def update_bid_ask(self):
         self.buy_orders.sort(key=lambda order: order["price"], reverse=True)  # sort from highest to lowest
         self.sell_orders.sort(key=lambda order: order["price"], reverse=False)  # sort from lowest to highest
 
@@ -41,13 +41,15 @@ class Security:
     def execute_market_order(self, trade):
         from Trader import Trader
         # buy_orders and sell_orders are sorted appropriately
-        self.__update_bid_ask()
+        self.update_bid_ask()
 
         if trade["side"] == "buy":  # market buy
             sell_index = 0
 
+            filtered_sell_orders = [item for item in self.sell_orders if item.get("trader") != trade["trader"]]
             while sell_index < len(self.sell_orders):
-                sell_order = self.sell_orders[sell_index]
+                # sell_order = self.sell_orders[sell_index]
+                sell_order = filtered_sell_orders[sell_index]
 
                 if sell_order is None:
                     break
@@ -88,14 +90,18 @@ class Security:
         else:  # market sell
             buy_index = 0
 
+            filtered_buy_orders = [item for item in self.buy_orders if item.get("trader") != trade["trader"]]
             while buy_index < len(self.buy_orders):
-                buy_order = self.buy_orders[buy_index]
+                # buy_order = self.buy_orders[buy_index]
+                buy_order = filtered_buy_orders[buy_index]
 
                 if buy_order is None:
                     break
 
                 trade_price = buy_order["price"]
                 trade_quantity = min(buy_order["size"], trade["size"])
+                print("Quantity", trade_quantity)
+                print(buy_order)
 
                 buy_trader = Trader.search_by_id(buy_order["trader"])
                 sell_trader = Trader.search_by_id(trade["trader"])
@@ -127,10 +133,10 @@ class Security:
                 else:
                     break
 
-    def execute_limit_order(self):
+    def execute_limit_order(self, side):
         from Trader import Trader
         # buy_orders and sell_orders are sorted appropriately
-        self.__update_bid_ask()
+        self.update_bid_ask()
 
         buy_index = 0
         sell_index = 0
@@ -152,6 +158,14 @@ class Security:
             if sell_order["size"] == 0:
                 sell_index += 1
                 continue
+
+            if buy_order["trader"] == sell_order["trader"]:
+                if side == "buy":
+                    sell_index += 1
+                    continue
+                else:
+                    buy_index += 1
+                    continue
 
             # If the buy order is greater than or equal than the sell order
             if buy_order["price"] >= sell_order["price"]:
