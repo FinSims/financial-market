@@ -74,8 +74,8 @@ class Security:
 
                 timestamp = datetime.now()
 
-                buy_trader.update_portfolio(trade["ticker"], timestamp, "buy", trade_quantity, trade_price)
-                sell_trader.update_portfolio(sell_order["ticker"], timestamp, "buy", trade_quantity, trade_price)
+                buy_trader.update_trade_history(trade["ticker"], timestamp, "buy", trade_quantity, trade_price)
+                sell_trader.update_trade_history(sell_order["ticker"], timestamp, "buy", trade_quantity, trade_price)
 
                 self.last.append({
                     "timestamp": timestamp,
@@ -119,8 +119,8 @@ class Security:
                     sell_trader.transaction("sell", trade["ticker"], trade_price, trade_quantity)
 
                 timestamp = datetime.now()
-                buy_trader.update_portfolio(buy_order["ticker"], timestamp, "buy", trade_quantity, trade_price)
-                sell_trader.update_portfolio(trade["ticker"], timestamp, "sell", trade_quantity, trade_price)
+                buy_trader.update_trade_history(buy_order["ticker"], timestamp, "buy", trade_quantity, trade_price)
+                sell_trader.update_trade_history(trade["ticker"], timestamp, "sell", trade_quantity, trade_price)
 
                 self.last.append({
                     "timestamp": timestamp,
@@ -197,8 +197,8 @@ class Security:
 
                 print(trade_price, buy_order, sell_order)
 
-                buy_trader.update_portfolio(buy_order["ticker"], timestamp, "buy", trade_quantity, trade_price)
-                sell_trader.update_portfolio(sell_order["ticker"], timestamp, "sell", trade_quantity, trade_price)
+                buy_trader.update_trade_history(buy_order["ticker"], timestamp, "buy", trade_quantity, trade_price)
+                sell_trader.update_trade_history(sell_order["ticker"], timestamp, "sell", trade_quantity, trade_price)
 
                 self.last.append({
                     "timestamp": timestamp,
