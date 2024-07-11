@@ -1,3 +1,5 @@
+# Don't run this file
+
 import yfinance as yf
 import csv
 from dotenv import load_dotenv
@@ -41,20 +43,20 @@ def get_recommendations(stock):
     return _0m_dict, _1m_dict, _2m_dict, _3m_dict
 
 
-with open("constituents.csv") as dataFile:
-    reader = csv.DictReader(dataFile)
-
-    for row in reader:
-        ticker = row["Symbol"]
-        stock = yf.Ticker(ticker)
-
-        # _0m_dict, _1m_dict, _2m_dict, _3m_dict = get_recommendations(stock)
-
-        if "beta" in stock.info:
-            supabase.table("stock_list").update({
-                "beta": stock.info["beta"]
-            }).eq("ticker", ticker).execute()
-        else:
-            supabase.table("stock_list").update({
-                "beta": None
-            }).eq("ticker", ticker).execute()
+# with open("constituents.csv") as dataFile:
+#     reader = csv.DictReader(dataFile)
+#
+#     for row in reader:
+#         ticker = row["Symbol"]
+#         stock = yf.Ticker(ticker)
+#
+#         # _0m_dict, _1m_dict, _2m_dict, _3m_dict = get_recommendations(stock)
+#
+#         if "beta" in stock.info:
+#             supabase.table("stock_list").update({
+#                 "beta": stock.info["beta"]
+#             }).eq("ticker", ticker).execute()
+#         else:
+#             supabase.table("stock_list").update({
+#                 "beta": None
+#             }).eq("ticker", ticker).execute()
