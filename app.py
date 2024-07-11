@@ -2,6 +2,7 @@ import pandas as pd
 from tabulate import tabulate
 import time
 import matplotlib.pyplot as plt
+from matplotlib import pyplot as plt
 from Security import Security
 from Trader import Trader
 
