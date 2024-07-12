@@ -166,10 +166,15 @@ class StockPredictor:
                  label='Predicted Close', color='orange')
         buy_signals = test_results_df_with_signals[test_results_df_with_signals['Signal'] == 'Buy']
         sell_signals = test_results_df_with_signals[test_results_df_with_signals['Signal'] == 'Sell']
+        neutral_signals = test_results_df_with_signals[test_results_df_with_signals['Signal'] == 'Neutral']
+
         plt.scatter(buy_signals['Date'], buy_signals['Actual'],
                     label='Buy Signal', marker='^', color='g')
         plt.scatter(sell_signals['Date'], sell_signals['Actual'],
                     label='Sell Signal', marker='v', color='r')
+        plt.scatter(neutral_signals['Date'], neutral_signals['Actual'],
+                    label='Neutral Signal', marker='o', color='gray')
+
         plt.xlabel('Date')
         plt.ylabel('Close Price')
         plt.legend()
@@ -179,5 +184,6 @@ class StockPredictor:
 
 
 # Example usage:
-predictor = StockPredictor()
-result_df = predictor.predict_stock("DELL")
+predictor = StockPredictor(lookback=7, hidden_size=16,
+                           num_stacked_layers=2, batch_size=16, learning_rate=0.003, num_epochs=30)
+result_df = predictor.predict_stock("MSFT")
