@@ -1,4 +1,5 @@
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader
+from torch.utils.data import Dataset
 from sklearn.preprocessing import MinMaxScaler
 from copy import deepcopy as dc
 import pandas as pd
@@ -10,69 +11,75 @@ import matplotlib.pyplot as plt
 import yfinance as yf
 import datetime
 
-# Load AMZN stock data
-msft = yf.Ticker("UNH")
+msft = yf.Ticker("VCEL")
+print(msft)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Get historical market data
+
+msft.info
+
 df = msft.history(period="5y")
+df
 
-# Focus on the 'Close' column
 df = df[['Close']]
-
-# Plot the closing price over time
-plt.plot(df.index, df['Close'])
-plt.show()
-
-# Function to prepare dataframe for LSTM model
+df
 
 
 def prepare_dataframe_for_lstm(df, n_steps):
     df = dc(df)
-    for i in range(1, n_steps + 1):
+
+    for i in range(1, n_steps+1):
         df[f'Close(t-{i})'] = df['Close'].shift(i)
+
     df.dropna(inplace=True)
+
     return df
 
 
-# Prepare the data with a lookback period
 lookback = 7
 shifted_df = prepare_dataframe_for_lstm(df, lookback)
+shifted_df
 
-# Convert the dataframe to numpy array
 shifted_df_np = shifted_df.to_numpy()
+shifted_df_np
 
-# Normalize the data
+
 scaler = MinMaxScaler(feature_range=(-1, 1))
 shifted_df_np = scaler.fit_transform(shifted_df_np)
 
-# Split into input (X) and output (y)
+shifted_df_np
+
 X = shifted_df_np[:, 1:]
 y = shifted_df_np[:, 0]
 
-# Reverse the input array for the LSTM
-X = dc(np.flip(X, axis=1))
+X.shape, y.shape
+print(X)
 
-# Split into training and testing sets
-split_index = int(len(X) * 0.95)
+X = dc(np.flip(X, axis=1))
+X
+split_index = int(len(X) * .95)
+split_index
+
 X_train = X[:split_index]
 X_test = X[split_index:]
+
 y_train = y[:split_index]
 y_test = y[split_index:]
 
-# Reshape the data for LSTM input
 X_train = X_train.reshape((-1, lookback, 1))
 X_test = X_test.reshape((-1, lookback, 1))
+
 y_train = y_train.reshape((-1, 1))
 y_test = y_test.reshape((-1, 1))
 
-# Convert to PyTorch tensors
+X_train.shape, X_test.shape, y_train.shape, y_test.shape
+
 X_train = torch.tensor(X_train).float()
 y_train = torch.tensor(y_train).float()
 X_test = torch.tensor(X_test).float()
 y_test = torch.tensor(y_test).float()
 
-# Define the custom Dataset
+X_train.shape, X_test.shape, y_train.shape, y_test.shape
 
 
 class TimeSeriesDataset(Dataset):
@@ -87,14 +94,21 @@ class TimeSeriesDataset(Dataset):
         return self.X[i], self.y[i]
 
 
-# Create datasets and dataloaders
 train_dataset = TimeSeriesDataset(X_train, y_train)
 test_dataset = TimeSeriesDataset(X_test, y_test)
+train_dataset
+
+
 batch_size = 16
+
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
-# Define the LSTM model
+
+for _, batch in enumerate(train_loader):
+    x_batch, y_batch = batch[0].to(device), batch[1].to(device)
+    print(x_batch.shape, y_batch.shape)
+    break
 
 
 class LSTM(nn.Module):
@@ -102,8 +116,10 @@ class LSTM(nn.Module):
         super().__init__()
         self.hidden_size = hidden_size
         self.num_stacked_layers = num_stacked_layers
-        self.lstm = nn.LSTM(input_size, hidden_size,
-                            num_stacked_layers, batch_first=True)
+
+        self.lstm = nn.LSTM(input_size, hidden_size, num_stacked_layers,
+                            batch_first=True)
+
         self.fc = nn.Linear(hidden_size, 1)
 
     def forward(self, x):
@@ -112,101 +128,116 @@ class LSTM(nn.Module):
                          self.hidden_size).to(device)
         c0 = torch.zeros(self.num_stacked_layers, batch_size,
                          self.hidden_size).to(device)
+
         out, _ = self.lstm(x, (h0, c0))
         out = self.fc(out[:, -1, :])
         return out
 
 
-# Initialize model, loss function, and optimizer
-model = LSTM(1, 16, 2).to(device)
-loss_function = nn.MSELoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-
-# Training function
+model = LSTM(1, 16, 2)
+model.to(device)
+model
 
 
 def train_one_epoch():
     model.train(True)
+    print(f'Epoch: {epoch + 1}')
     running_loss = 0.0
+
     for batch_index, batch in enumerate(train_loader):
         x_batch, y_batch = batch[0].to(device), batch[1].to(device)
-        optimizer.zero_grad()
+
         output = model(x_batch)
         loss = loss_function(output, y_batch)
         running_loss += loss.item()
+
+        optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        if batch_index % 100 == 99:
+
+        if batch_index % 100 == 99:  # print every 100 batches
             avg_loss_across_batches = running_loss / 100
-            print('Batch {0}, Loss: {1:.3f}'.format(
-                batch_index + 1, avg_loss_across_batches))
+            print('Batch {0}, Loss: {1:.3f}'.format(batch_index+1,
+                                                    avg_loss_across_batches))
             running_loss = 0.0
     print()
 
-# Validation function
-
 
 def validate_one_epoch():
-    model.eval()
+    model.train(False)
     running_loss = 0.0
-    with torch.no_grad():
-        for batch_index, batch in enumerate(test_loader):
-            x_batch, y_batch = batch[0].to(device), batch[1].to(device)
+
+    for batch_index, batch in enumerate(test_loader):
+        x_batch, y_batch = batch[0].to(device), batch[1].to(device)
+
+        with torch.no_grad():
             output = model(x_batch)
             loss = loss_function(output, y_batch)
             running_loss += loss.item()
+
     avg_loss_across_batches = running_loss / len(test_loader)
+
     print('Val Loss: {0:.3f}'.format(avg_loss_across_batches))
     print('***************************************************')
     print()
 
 
-# Train the model
+learning_rate = 0.002
 num_epochs = 30
+loss_function = nn.MSELoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+
 for epoch in range(num_epochs):
     train_one_epoch()
     validate_one_epoch()
 
-# Plot training predictions vs actual values
 with torch.no_grad():
     predicted = model(X_train.to(device)).to('cpu').numpy()
+
 plt.plot(y_train, label='Actual Close')
+
 plt.plot(predicted, label='Predicted Close')
 plt.xlabel('Day')
 plt.ylabel('Close')
 plt.legend()
 plt.show()
 
-# Inverse transform the predictions and actual values for plotting
+print(y_train.shape)
+print(predicted.shape)
 train_predictions = predicted.flatten()
-dummies = np.zeros((X_train.shape[0], lookback + 1))
+print(train_predictions.shape)
+
+
+dummies = np.zeros((X_train.shape[0], lookback+1))
 dummies[:, 0] = train_predictions
 dummies = scaler.inverse_transform(dummies)
-train_predictions = dc(dummies[:, 0])
 
-dummies = np.zeros((X_train.shape[0], lookback + 1))
+train_predictions = dc(dummies[:, 0])
+train_predictions
+
+dummies = np.zeros((X_train.shape[0], lookback+1))
 dummies[:, 0] = y_train.flatten()
 dummies = scaler.inverse_transform(dummies)
+
 new_y_train = dc(dummies[:, 0])
+new_y_train
 
-plt.plot(new_y_train, label='Actual Close')
-plt.plot(train_predictions, label='Predicted Close')
-plt.xlabel('Day')
-plt.ylabel('Close')
-plt.legend()
-plt.show()
 
-# Plot test predictions vs actual values
 test_predictions = model(X_test.to(device)).detach().cpu().numpy().flatten()
-dummies = np.zeros((X_test.shape[0], lookback + 1))
+
+dummies = np.zeros((X_test.shape[0], lookback+1))
 dummies[:, 0] = test_predictions
 dummies = scaler.inverse_transform(dummies)
-test_predictions = dc(dummies[:, 0])
 
-dummies = np.zeros((X_test.shape[0], lookback + 1))
+test_predictions = dc(dummies[:, 0])
+test_predictions
+
+dummies = np.zeros((X_test.shape[0], lookback+1))
 dummies[:, 0] = y_test.flatten()
 dummies = scaler.inverse_transform(dummies)
+
 new_y_test = dc(dummies[:, 0])
+new_y_test
 
 plt.plot(new_y_test, label='Actual Close')
 plt.plot(test_predictions, label='Predicted Close')
@@ -215,8 +246,13 @@ plt.ylabel('Close')
 plt.legend()
 plt.show()
 
-# Prepare the results dataframe
+
+test_predictions
+
+
 test_dates = df.index[-len(new_y_test):]
+
+# Create dataframe with dates, actual and predicted values
 test_results_df = pd.DataFrame({
     'Date': test_dates,
     'Actual': new_y_test,
@@ -225,41 +261,37 @@ test_results_df = pd.DataFrame({
 print("Test Results:")
 print(test_results_df)
 
-# Function to predict future dates
+
+def generate_trading_signals(test_results_df, neutral_threshold=0.01):
+    test_results_df['Signal'] = 'Neutral'
+
+    test_results_df.loc[test_results_df['Predicted'] >
+                        test_results_df['Actual'] * (1 + neutral_threshold), 'Signal'] = 'Buy'
+    test_results_df.loc[test_results_df['Predicted'] <
+                        test_results_df['Actual'] * (1 - neutral_threshold), 'Signal'] = 'Sell'
+
+    return test_results_df
 
 
-def predict_future_dates(model, last_known_data, scaler, num_predictions):
-    model.eval()
-    predictions = []
-    data = last_known_data
-    for _ in range(num_predictions):
-        input_data = torch.tensor(data.reshape(
-            1, lookback, 1)).float().to(device)
-        with torch.no_grad():
-            pred = model(input_data).cpu().numpy().flatten()
-        predictions.append(pred[0])
-        data = np.append(data[1:], pred)
-    predictions = np.array(predictions).reshape(-1, 1)
-    dummies = np.zeros((predictions.shape[0], lookback + 1))
-    dummies[:, 0] = predictions.flatten()
-    predictions = scaler.inverse_transform(dummies)[:, 0]
-    return predictions
+test_results_df_with_signals = generate_trading_signals(test_results_df)
+print(test_results_df_with_signals)
 
-
-# Predict future dates
-num_future_predictions = 2
-last_known_data = X_test[-1].cpu().numpy()
-future_predictions = predict_future_dates(
-    model, last_known_data, scaler, num_future_predictions)
-
-# Create future dates
-last_date = test_results_df['Date'].iloc[-1]
-future_dates = pd.date_range(
-    start=last_date, periods=num_future_predictions + 1)[1:]
-
-# Prepare the predictions dataframe
-predictions = pd.DataFrame(
-    future_predictions, index=future_dates, columns=['Predicted'])
-predictions['Percent Change'] = predictions['Predicted'].pct_change()
-
-print(predictions)
+# Visualization of trading signals
+plt.figure(figsize=(14, 7))
+plt.plot(test_results_df['Date'], test_results_df['Actual'],
+         label='Actual Close', color='b')
+plt.plot(test_results_df['Date'], test_results_df['Predicted'],
+         label='Predicted Close', color='orange')
+buy_signals = test_results_df_with_signals[test_results_df_with_signals['Signal'] == 'Buy']
+sell_signals = test_results_df_with_signals[test_results_df_with_signals['Signal'] == 'Sell']
+neutral_signals = test_results_df_with_signals[test_results_df_with_signals['Signal'] == 'Neutral']
+plt.scatter(buy_signals['Date'], buy_signals['Actual'],
+            label='Buy Signal', marker='^', color='g')
+plt.scatter(sell_signals['Date'], sell_signals['Actual'],
+            label='Sell Signal', marker='v', color='r')
+plt.scatter(neutral_signals['Date'], neutral_signals['Actual'],
+            label='Neutral Signal', marker='o', color='gray')
+plt.xlabel('Date')
+plt.ylabel('Close Price')
+plt.legend()
+plt.show()
