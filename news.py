@@ -22,10 +22,11 @@ class News:
 
     def generate_headline(self, stock, sentiment):
         headlines = {
-            1: f"{stock} faces major setbacks: Investors brace for impact",
-            2: f"Challenges ahead for {stock}: Cautious optimism in the market",
-            3: f"Steady performance for {stock}: Market remains neutral",
-            4: f"{stock} shows promising growth: Analysts expect positive trends",
-            5: f"{stock} soars to new heights: Investors celebrate remarkable gains"
+            1: f"{stock} gets set to fall: Investors brace for PAINAL",
+            2: f"{stock} might have some challenges ahead: Investors are edging, but might not make it during NNN",
+            3: f"{stock} is flat: Asian Woman council has inducted it into hall of fame",
+            4: f"{stock} shows promising growth from chode to slightly below average: Analysts expect penis enlargement pills to kick in soon",
+            5: f"{stock} reaches CLIMAX: All the investors are getting  pounded by their wives"
         }
+
         return headlines.get(sentiment, "Market update for " + stock)
