@@ -177,6 +177,7 @@ class QuantPredictor:
 
         plt.xlabel('Date')
         plt.ylabel('Close Price')
+        plt.title(f'{ticker} Close Price with Trading Signals')
         plt.legend()
         plt.show()
 
