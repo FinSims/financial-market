@@ -187,3 +187,5 @@ class QuantPredictor:
 predictor = QuantPredictor(lookback=7, hidden_size=16,
                            num_stacked_layers=2, batch_size=16, learning_rate=0.003, num_epochs=30)
 result_df = predictor.predict_stock("DNN")
+print("Res")
+print(result_df)
