@@ -9,7 +9,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
 
 
-class StockPredictor:
+class QuantPredictor:
     def __init__(self, lookback=7, hidden_size=16, num_stacked_layers=2, batch_size=16, learning_rate=0.003, num_epochs=30):
         self.lookback = lookback
         self.hidden_size = hidden_size
@@ -184,6 +184,6 @@ class StockPredictor:
 
 
 # Example usage:
-predictor = StockPredictor(lookback=7, hidden_size=16,
+predictor = QuantPredictor(lookback=7, hidden_size=16,
                            num_stacked_layers=2, batch_size=16, learning_rate=0.003, num_epochs=30)
-result_df = predictor.predict_stock("MSFT")
+result_df = predictor.predict_stock("DNN")
