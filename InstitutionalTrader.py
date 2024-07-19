@@ -1,6 +1,9 @@
+import math
+
 from Trader import Trader
 from SupabaseClient import SupabaseClient
 from supabase import Client
+from Security import Security
 
 
 class InstitutionalTrader(Trader):
@@ -34,19 +37,44 @@ class InstitutionalTrader(Trader):
         # Print the weighted average rating
         print("The weighted average rating is:", weighted_average_rating)
 
-    def analyze_recommendations(self):
+    def generate_trade_signal(self, stock_ticker, minimum_percentile):
         supabase_instance: Client = SupabaseClient.get_instance()
 
-        response = supabase_instance.table("stock_list").select("*").gte("0m_rating", 0).order("0m_rating",
-                                                                                                  desc=True).limit(
-            20).order("weighted_0m_rating").execute()
+        ordered_tickers = supabase_instance.table("stock_list").select("ticker").order(
+            "overall_stock_rating", desc=True).execute()
 
-        return response
+        weighted_ordered_tickers = supabase_instance.table("stock_list").select("ticker").order(
+            "weighted_overall_stock_rating", desc=True).execute()
+
+        total_tickers = len(ordered_tickers.data)
+        rank = 0
+
+        for ticker in ordered_tickers.data:
+            rank += 1
+            if ticker["ticker"] == stock_ticker:
+                break
+
+        other_rank = 0
+
+        for ticker in weighted_ordered_tickers.data:
+            other_rank += 1
+            if ticker["ticker"] == stock_ticker:
+                break
+
+        percentile = (total_tickers - rank) / total_tickers * 100
+        weighted_percentile = (total_tickers - other_rank) / total_tickers * 100
+
+        overall_percentile = (percentile + weighted_percentile) / 2
+
+        if overall_percentile >= minimum_percentile:
+            stock = Security.get_instance(stock_ticker)
+            quantity = math.floor((self.balance * .05) / stock.last[0]["price"])
+            super().create_market_order(stock_ticker, "buy", quantity)
+
+        return (percentile + weighted_percentile) / 2
 
 
-trader = InstitutionalTrader(3)
-response = trader.analyze_recommendations()
-
-for row in response.data:
-    print(row["ticker"], row["0m_rating"], row["weighted_0m_rating"], row["-1m_rating"],
-          row["weighted_-1m_rating"])
+# trader = InstitutionalTrader(3)
+# response = trader.generate_trade_signal("KVUE")
+#
+# print(response)

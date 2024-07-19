@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib import pyplot as plt
 from Security import Security
 from Trader import Trader
+from InstitutionalTrader import InstitutionalTrader
 
 
 def plot_security_prices(security):
@@ -24,8 +25,9 @@ def plot_security_prices(security):
 
 # ! Important: Bug with calculating average price when shorting and covering back shares
 my_stock = Security("AAPL")
-trader = Trader(False, 1100000)
-another_trader = Trader(True, 1300000)
+trader = Trader(False, 11000)
+another_trader = Trader(True, 13000)
+inst_trader = InstitutionalTrader(10000000000)
 # print(my_stock.order_book)
 trader.create_limit_order("AAPL", "buy", 102.0, 17)
 time.sleep(1)
@@ -37,10 +39,9 @@ another_trader.create_limit_order("AAPL", "sell", 103.0, 7)
 time.sleep(1)
 trader.create_limit_order("AAPL", "buy", 105.0, 7)
 time.sleep(1)
-another_trader.create_limit_order("AAPL", "sell", 104.0, 7)
+another_trader.create_limit_order("AAPL", "sell", 104.0, 7000)
 time.sleep(1)
-another_trader.create_limit_order("AAPL", "buy", 92.0, 5)
-trader.create_limit_order("AAPL", "sell", 92.0, 3)
+inst_trader.generate_trade_signal("AAPL", 90)
 # time.sleep(1)
 # trader.create_limit_order("AAPL", "sell", 101.0, 2)
 # time.sleep(1)

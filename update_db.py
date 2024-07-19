@@ -62,7 +62,7 @@ def get_stock_rating(month_dict):
 
     # Calculate the weighted average rating
     if total_count > 0:
-        weighted_average_rating = total_score
+        weighted_average_rating = total_score / total_count
     else:
         weighted_average_rating = None
 
