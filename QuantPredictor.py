@@ -196,8 +196,8 @@ class QuantPredictor:
 
 
 # Example usage:
-predictor = QuantPredictor(lookback=5, hidden_size=16, num_stacked_layers=2,
-                           batch_size=16, learning_rate=0.005, num_epochs=30)
-result_df = predictor.predict_stock("AAPL")
+predictor = QuantPredictor(lookback=5, hidden_size=32, num_stacked_layers=2,
+                           batch_size=16, learning_rate=0.001, num_epochs=50)
+result_df = predictor.predict_stock("GOOG")
 print("Res")
 print(result_df)
