@@ -1,5 +1,4 @@
 import math
-
 from Trader import Trader
 from SupabaseClient import SupabaseClient
 from supabase import Client
@@ -71,7 +70,7 @@ class InstitutionalTrader(Trader):
             quantity = math.floor((self.balance * .05) / stock.last[0]["price"])
             super().create_market_order(stock_ticker, "buy", quantity)
 
-        return (percentile + weighted_percentile) / 2
+        return overall_percentile
 
 
 # trader = InstitutionalTrader(3)

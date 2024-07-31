@@ -41,6 +41,8 @@ trader.create_limit_order("AAPL", "buy", 105.0, 7)
 time.sleep(1)
 another_trader.create_limit_order("AAPL", "sell", 104.0, 7000)
 time.sleep(1)
+
+# Decide whether AAPL is worth buying if it meets the criteria with the minimum percentile of 90
 inst_trader.generate_trade_signal("AAPL", 90)
 # time.sleep(1)
 # trader.create_limit_order("AAPL", "sell", 101.0, 2)

@@ -1,4 +1,4 @@
-# Don't run this file
+# ********* DO NOT RUN THIS FILE! *********
 
 import yfinance as yf
 import csv
