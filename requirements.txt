@@ -1,33 +1,13 @@
 # This file may be used to create an environment using:
 # $ conda create --name <env> --file <this file>
 # platform: osx-arm64
-bzip2=1.0.8=h93a5062_5
-ca-certificates=2024.2.2=hf0a4a13_0
-contourpy=1.2.1=pypi_0
-cycler=0.12.1=pypi_0
-fonttools=4.53.0=pypi_0
-kiwisolver=1.4.5=pypi_0
-libexpat=2.6.2=hebf3989_0
-libffi=3.4.2=h3422bc3_5
-libsqlite=3.45.2=h091b4b1_0
-libzlib=1.2.13=h53f4e23_5
-matplotlib=3.9.0=pypi_0
-ncurses=6.4.20240210=h078ce10_0
-numpy=1.26.4=pypi_0
-openssl=3.2.1=h0d3ecfb_1
-packaging=24.1=pypi_0
-pandas=2.2.2=pypi_0
-pillow=10.4.0=pypi_0
-pip=24.0=pyhd8ed1ab_0
-pyparsing=3.1.2=pypi_0
-python=3.11.8=hdf0ec26_0_cpython
-python-dateutil=2.9.0.post0=pypi_0
-pytz=2024.1=pypi_0
-readline=8.2=h92ec313_1
-setuptools=69.2.0=pyhd8ed1ab_0
-six=1.16.0=pypi_0
-tabulate=0.9.0=pypi_0
-tk=8.6.13=h5083fa2_1
-tzdata=2024.1=pypi_0
-wheel=0.43.0=pyhd8ed1ab_0
-xz=5.2.6=h57fd34a_0
+
+pandas~=2.2.2
+matplotlib~=3.9.0
+tabulate~=0.9.0
+yfinance~=0.2.40
+numpy~=1.26.4
+torch~=2.3.1
+scikit-learn~=1.5.1
+python-dotenv~=1.0.1
+supabase~=2.5.1
