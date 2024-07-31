@@ -196,8 +196,13 @@ class QuantPredictor:
 
 
 # Example usage:
-# predictor = QuantPredictor(lookback=5, hidden_size=32, num_stacked_layers=2,
-#                            batch_size=16, learning_rate=0.001, num_epochs=50)
-# result_df = predictor.predict_stock("GOOG")
-# print("Res")
-# print(result_df)
+# See how cucked it is with meta
+# QCOM
+
+
+# Just predict direction not how much, just predict direction for the next day.
+predictor = QuantPredictor(lookback=10, hidden_size=64, num_stacked_layers=4,
+                           batch_size=32, learning_rate=0.01, num_epochs=50)
+result_df = predictor.predict_stock("AAPL")
+print("Res")
+print(result_df)
