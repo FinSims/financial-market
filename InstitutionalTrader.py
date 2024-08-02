@@ -9,34 +9,7 @@ class InstitutionalTrader(Trader):
     def __init__(self, balance):
         super().__init__(True, balance)
 
-    @staticmethod
-    def __get_stock_rating(month_dict):
-        recommendation_values = {
-            'strongBuy': 5,
-            'buy': 4,
-            'hold': 3,
-            'sell': 2,
-            'strongSell': 1,
-        }
-
-        total_score = 0
-        total_count = 0
-
-        # Loop through the recommendations and calculate the weighted average
-        for recommendation, count in month.items():
-            total_score += recommendation_values[recommendation] * count
-            total_count += count
-
-        # Calculate the weighted average rating
-        if total_count > 0:
-            weighted_average_rating = total_score / total_count
-        else:
-            weighted_average_rating = 0
-
-        # Print the weighted average rating
-        print("The weighted average rating is:", weighted_average_rating)
-
-    def generate_trade_signal(self, stock_ticker, minimum_percentile):
+    def generate_trade_signal(self, stock_ticker, min_percentile, max_percentile, time):
         supabase_instance: Client = SupabaseClient.get_instance()
 
         ordered_tickers = supabase_instance.table("stock_list").select("ticker").order(
@@ -65,15 +38,16 @@ class InstitutionalTrader(Trader):
 
         overall_percentile = (percentile + weighted_percentile) / 2
 
-        if overall_percentile >= minimum_percentile:
+        if overall_percentile >= min_percentile:
             stock = Security.get_instance(stock_ticker)
             quantity = math.floor((self.balance * .05) / stock.last[0]["price"])
-            super().create_market_order(stock_ticker, "buy", quantity)
+            print("\nSubmitted buy order for stock: " + stock_ticker + " at " + time)
+            super().create_limit_order(stock_ticker, "buy", stock.ask, quantity)
 
-        return overall_percentile
+        if overall_percentile < max_percentile:
+            stock = Security.get_instance(stock_ticker)
+            quantity = math.floor((self.balance * .05) / stock.last[0]["price"])
+            print("\nSubmitted short sell order for stock: " + stock_ticker + " at " + time)
+            super().create_limit_order(stock_ticker, "sell", stock.bid, quantity)
 
 
-# trader = InstitutionalTrader(3)
-# response = trader.generate_trade_signal("KVUE")
-#
-# print(response)

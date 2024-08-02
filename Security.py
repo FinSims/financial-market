@@ -1,4 +1,5 @@
-from datetime import datetime
+from datetime import datetime, time
+import yfinance as yf
 
 
 class Security:
@@ -13,12 +14,28 @@ class Security:
 
     def __init__(self, ticker):
         if not hasattr(self, 'initialized'):
+            stock = yf.Ticker(ticker)
+
             self.ticker = ticker
             self.buy_orders = []
             self.sell_orders = []
-            self.bid = 0
-            self.ask = 0
-            self.last = []
+            self.bid = stock.info["bid"]
+            self.ask = stock.info["ask"]
+
+            now = datetime.now()
+            market_open = time(9, 30)
+            market_close = time(16, 0)
+
+            if market_open <= now.time() <= market_close:
+                self.last = [{
+                    "timestamp": now,
+                    "price": stock.info["regularMarketPreviousClose"]
+                }]
+            else:
+                self.last = [{
+                    "timestamp": now.replace(hour=16, minute=0, second=0, microsecond=0),
+                    "price": stock.info["regularMarketPreviousClose"]
+                }]
 
     @classmethod
     def get_instance(cls, symbol):
@@ -100,8 +117,6 @@ class Security:
 
                 trade_price = buy_order["price"]
                 trade_quantity = min(buy_order["size"], trade["size"])
-                print("Quantity", trade_quantity)
-                print(buy_order)
 
                 buy_trader = Trader.search_by_id(buy_order["trader"])
                 sell_trader = Trader.search_by_id(trade["trader"])
@@ -195,10 +210,12 @@ class Security:
 
                 timestamp = datetime.now()
 
-                print(trade_price, buy_order, sell_order)
-
                 buy_trader.update_trade_history(buy_order["ticker"], timestamp, "buy", trade_quantity, trade_price)
                 sell_trader.update_trade_history(sell_order["ticker"], timestamp, "sell", trade_quantity, trade_price)
+
+                print("Order matched. Buyer of ID " + str(
+                    buy_trader.id) + " bought " + str(trade_quantity) + " shares of stock " + self.ticker + " for "
+                    "price " + str(trade_price) + " from seller of ID" + str(sell_trader.id) + ".")
 
                 self.last.append({
                     "timestamp": timestamp,

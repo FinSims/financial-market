@@ -14,7 +14,12 @@ class Trader:
         self.trade_history = []
         # Whether the trader can short sell stocks
         self.shorting = shorting
-        Trader._instances.append(self)
+        self._instances.append(self)
+
+    @classmethod
+    def show_instances(cls):
+        for item in cls._instances:
+            print(item.id)
 
     @classmethod
     def search_by_id(cls, class_id) -> Optional['Trader']:

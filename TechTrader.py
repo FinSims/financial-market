@@ -160,6 +160,6 @@ if __name__ == "__main__":
     sma.display()
     plt.show()'''
     
-    ema = ExponentialMovingAverage("PLTR")
+    ema = ExponentialMovingAverage("NKE")
     ema.display()
     plt.show()
