@@ -12,8 +12,8 @@ class QuantTrader(Trader):
         super().__init__(True, balance)
 
     def get_stock_recc(self, stock):
-        predictor = QuantPredictor(lookback=7, hidden_size=16,
-                                   num_stacked_layers=2, batch_size=16, learning_rate=0.003, num_epochs=30)
+        predictor = QuantPredictor(lookback=5, hidden_size=64,
+                                   num_stacked_layers=4, batch_size=16, learning_rate=0.003, num_epochs=30)
         result_df = predictor.predict_stock(str(stock))
         return result_df
 
