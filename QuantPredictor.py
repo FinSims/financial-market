@@ -203,6 +203,6 @@ class QuantPredictor:
 # Just predict direction not how much, just predict direction for the next day.
 predictor = QuantPredictor(lookback=5, hidden_size=64, num_stacked_layers=4,
                            batch_size=32, learning_rate=0.001, num_epochs=35)
-result_df = predictor.predict_stock("C")
+result_df = predictor.predict_stock("NVDA")
 print("Res")
 print(result_df)
