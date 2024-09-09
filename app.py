@@ -3,8 +3,8 @@ from tabulate import tabulate
 import time
 import matplotlib.pyplot as plt
 from matplotlib import pyplot as plt
-from Security import Security
-from Trader import Trader
+from utilities.Security import Security
+from utilities.Trader import Trader
 from InstitutionalTrader import InstitutionalTrader
 
 

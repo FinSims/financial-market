@@ -30,7 +30,8 @@ class Trader:
 
     # Finds the given stock in the trader's portfolio
     def find_stock(self, ticker):
-        portfolio_stock = next((stock for stock in self.portfolio if stock["ticker"] == ticker), None)
+        portfolio_stock = next(
+            (stock for stock in self.portfolio if stock["ticker"] == ticker), None)
         return portfolio_stock
 
     def update_trade_history(self, ticker, timestamp, side, quantity, price):
@@ -51,7 +52,7 @@ class Trader:
         return self.trade_history
 
     def create_market_order(self, ticker, side, quantity):
-        from Security import Security
+        from utilities.Security import Security
         instrument = Security.get_instance(ticker)
 
         if instrument is None:
@@ -74,7 +75,8 @@ class Trader:
             portfolio_stock = self.find_stock(ticker)
 
             if portfolio_stock is not None and portfolio_stock["size"] < quantity and self.shorting is False:
-                print("Error: Order not accepted. Not enough stock to sell. Short selling is disabled.")
+                print(
+                    "Error: Order not accepted. Not enough stock to sell. Short selling is disabled.")
             else:
                 trade = {
                     "trader": self.id,
@@ -89,7 +91,7 @@ class Trader:
                 instrument.execute_market_order(trade)
 
     def create_limit_order(self, ticker, side, price, quantity):
-        from Security import Security
+        from utilities.Security import Security
         instrument = Security.get_instance(ticker)
 
         if instrument is None:
@@ -117,7 +119,8 @@ class Trader:
 
             if (portfolio_stock is None and self.shorting is False) or (
                     portfolio_stock is not None and portfolio_stock["size"] < quantity and self.shorting is False):
-                print("Error: Order not accepted. Not enough stock to sell. Short selling is disabled.")
+                print(
+                    "Error: Order not accepted. Not enough stock to sell. Short selling is disabled.")
             else:
                 matching_order_index = next(
                     (i for i, order in enumerate(instrument.sell_orders) if order["price"] == price), None)
@@ -156,8 +159,8 @@ class Trader:
                     # If we already own shares of it
                     if portfolio_stock["size"] > 0:
                         new_avg_price = ((portfolio_stock["avg_price"] * portfolio_stock["size"]) + (
-                                    price * 1)) / (
-                                                portfolio_stock["size"] + 1)
+                            price * 1)) / (
+                            portfolio_stock["size"] + 1)
                         portfolio_stock["avg_price"] = new_avg_price
                         portfolio_stock["size"] += 1
                         self.balance -= price
@@ -174,7 +177,7 @@ class Trader:
                 if self.shorting is True and portfolio_stock["size"] < 0:
                     # If we are already shorting some shares, we'll calculate new average price
                     new_avg_price = ((portfolio_stock["avg_price"] * abs(portfolio_stock["size"])) + (price * 1)) / (
-                            abs(portfolio_stock["size"]) + 1)
+                        abs(portfolio_stock["size"]) + 1)
                     portfolio_stock["avg_price"] = new_avg_price
                     portfolio_stock["size"] -= 1
                     self.balance += price
@@ -196,12 +199,14 @@ class Trader:
                     })
                     self.balance += price
                 else:
-                    print("Error: Order not accepted. No shares of " + ticker + " already owned in portfolio.")
+                    print("Error: Order not accepted. No shares of " +
+                          ticker + " already owned in portfolio.")
                     return False
 
     def percent_change(self):
         # check if initial balance is 0
-        init_balance = float(self.init_balance) if self.init_balance != 0 else .01
+        init_balance = float(
+            self.init_balance) if self.init_balance != 0 else .01
         balance = self.balance
 
         if balance == init_balance:

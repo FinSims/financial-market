@@ -1,5 +1,5 @@
 import random
-from SupabaseClient import SupabaseClient
+from services.SupabaseClient import SupabaseClient
 
 client = SupabaseClient.get_instance()
 

@@ -1,5 +1,5 @@
 from QuantPredictor import QuantPredictor
-from Trader import Trader
+from utilities.Trader import Trader
 
 
 # LSTM Will give price prediciton on the next day

@@ -42,8 +42,10 @@ class Security:
         return cls._instances.get(symbol, None)
 
     def update_bid_ask(self):
-        self.buy_orders.sort(key=lambda order: order["price"], reverse=True)  # sort from highest to lowest
-        self.sell_orders.sort(key=lambda order: order["price"], reverse=False)  # sort from lowest to highest
+        # sort from highest to lowest
+        self.buy_orders.sort(key=lambda order: order["price"], reverse=True)
+        # sort from lowest to highest
+        self.sell_orders.sort(key=lambda order: order["price"], reverse=False)
 
         if len(self.buy_orders) > 0:
             self.bid = max(self.buy_orders, key=lambda x: x['price'])["price"]
@@ -56,14 +58,15 @@ class Security:
             self.ask = 0
 
     def execute_market_order(self, trade):
-        from Trader import Trader
+        from utilities.Trader import Trader
         # buy_orders and sell_orders are sorted appropriately
         self.update_bid_ask()
 
         if trade["side"] == "buy":  # market buy
             sell_index = 0
 
-            filtered_sell_orders = [item for item in self.sell_orders if item.get("trader") != trade["trader"]]
+            filtered_sell_orders = [
+                item for item in self.sell_orders if item.get("trader") != trade["trader"]]
             while sell_index < len(self.sell_orders):
                 # sell_order = self.sell_orders[sell_index]
                 sell_order = filtered_sell_orders[sell_index]
@@ -81,18 +84,22 @@ class Security:
                     trade["size"] -= 1
                     sell_order["size"] -= 1
 
-                    result = buy_trader.transaction("buy", trade["ticker"], trade_price, trade_quantity)
+                    result = buy_trader.transaction(
+                        "buy", trade["ticker"], trade_price, trade_quantity)
 
                     if result is False:
                         trade_quantity = i
                         break
 
-                    sell_trader.transaction("sell", trade["ticker"], trade_price, trade_quantity)
+                    sell_trader.transaction(
+                        "sell", trade["ticker"], trade_price, trade_quantity)
 
                 timestamp = datetime.now()
 
-                buy_trader.update_trade_history(trade["ticker"], timestamp, "buy", trade_quantity, trade_price)
-                sell_trader.update_trade_history(sell_order["ticker"], timestamp, "buy", trade_quantity, trade_price)
+                buy_trader.update_trade_history(
+                    trade["ticker"], timestamp, "buy", trade_quantity, trade_price)
+                sell_trader.update_trade_history(
+                    sell_order["ticker"], timestamp, "buy", trade_quantity, trade_price)
 
                 self.last.append({
                     "timestamp": timestamp,
@@ -107,7 +114,8 @@ class Security:
         else:  # market sell
             buy_index = 0
 
-            filtered_buy_orders = [item for item in self.buy_orders if item.get("trader") != trade["trader"]]
+            filtered_buy_orders = [
+                item for item in self.buy_orders if item.get("trader") != trade["trader"]]
             while buy_index < len(self.buy_orders):
                 # buy_order = self.buy_orders[buy_index]
                 buy_order = filtered_buy_orders[buy_index]
@@ -125,17 +133,21 @@ class Security:
                     trade["size"] -= 1
                     buy_order["size"] -= 1
 
-                    result = buy_trader.transaction("buy", trade["ticker"], trade_price, trade_quantity)
+                    result = buy_trader.transaction(
+                        "buy", trade["ticker"], trade_price, trade_quantity)
 
                     if result is False:
                         trade_quantity = i
                         break
 
-                    sell_trader.transaction("sell", trade["ticker"], trade_price, trade_quantity)
+                    sell_trader.transaction(
+                        "sell", trade["ticker"], trade_price, trade_quantity)
 
                 timestamp = datetime.now()
-                buy_trader.update_trade_history(buy_order["ticker"], timestamp, "buy", trade_quantity, trade_price)
-                sell_trader.update_trade_history(trade["ticker"], timestamp, "sell", trade_quantity, trade_price)
+                buy_trader.update_trade_history(
+                    buy_order["ticker"], timestamp, "buy", trade_quantity, trade_price)
+                sell_trader.update_trade_history(
+                    trade["ticker"], timestamp, "sell", trade_quantity, trade_price)
 
                 self.last.append({
                     "timestamp": timestamp,
@@ -149,7 +161,7 @@ class Security:
                     break
 
     def execute_limit_order(self, side):
-        from Trader import Trader
+        from utilities.Trader import Trader
         # buy_orders and sell_orders are sorted appropriately
         self.update_bid_ask()
 
@@ -200,18 +212,22 @@ class Security:
                     buy_order["size"] -= 1
                     sell_order["size"] -= 1
 
-                    result = buy_trader.transaction("buy", buy_order["ticker"], trade_price, trade_quantity)
+                    result = buy_trader.transaction(
+                        "buy", buy_order["ticker"], trade_price, trade_quantity)
 
                     if result is False:
                         trade_quantity = i
                         break
 
-                    sell_trader.transaction("sell", sell_order["ticker"], trade_price, trade_quantity)
+                    sell_trader.transaction(
+                        "sell", sell_order["ticker"], trade_price, trade_quantity)
 
                 timestamp = datetime.now()
 
-                buy_trader.update_trade_history(buy_order["ticker"], timestamp, "buy", trade_quantity, trade_price)
-                sell_trader.update_trade_history(sell_order["ticker"], timestamp, "sell", trade_quantity, trade_price)
+                buy_trader.update_trade_history(
+                    buy_order["ticker"], timestamp, "buy", trade_quantity, trade_price)
+                sell_trader.update_trade_history(
+                    sell_order["ticker"], timestamp, "sell", trade_quantity, trade_price)
 
                 print("Order matched. Buyer of ID " + str(
                     buy_trader.id) + " bought " + str(trade_quantity) + " shares of stock " + self.ticker + " for "

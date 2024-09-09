@@ -2,13 +2,13 @@ import random
 
 import simpy
 import datetime
-from Trader import Trader
+from utilities.Trader import Trader
 import uuid
-from SupabaseClient import SupabaseClient
+from services.SupabaseClient import SupabaseClient
 from supabase import Client
 from InstitutionalTrader import InstitutionalTrader
 import random
-from Security import Security
+from utilities.Security import Security
 import yfinance as yf
 
 
@@ -38,7 +38,8 @@ class Market:
     # Creates all the institutional traders and add them to the database
     def __init_inst(self):
         # Clear all entries of existing traders to set up a new simulation
-        self.supabase.table("traders").delete().eq("type", "institutional").execute()
+        self.supabase.table("traders").delete().eq(
+            "type", "institutional").execute()
 
         inst_traders = int(self.percent_inst * self.total_traders)
 
@@ -58,8 +59,10 @@ class Market:
         while True:
             time = self._format_time(_env.now)
 
-            random_trader = random.choice(trader_response.data)  # Chooses a random institutional trader
-            random_stock = random.choice(stock_response.data)  # Chooses a random stock
+            # Chooses a random institutional trader
+            random_trader = random.choice(trader_response.data)
+            random_stock = random.choice(
+                stock_response.data)  # Chooses a random stock
 
             # If the stock is not initialized yet, we initialize it by creating a new Security object
             if Security.get_instance(random_stock["ticker"]) is None:
@@ -71,22 +74,27 @@ class Market:
                                               yf_stock.info[
                                                   "sharesOutstanding"])
 
-            trader = InstitutionalTrader.search_by_id(uuid.UUID(random_trader["trader_id"]))
+            trader = InstitutionalTrader.search_by_id(
+                uuid.UUID(random_trader["trader_id"]))
             # Buys a stock if percentile is over 75, short sells stock if percentile is below 20
             trader.generate_trade_signal(random_stock["ticker"], 75, 20, time)
             yield _env.timeout(1)  # Advance by one minute
 
     def open_market(self):
-        ipo_id = self.__init_ipo()  # Init IPO trader that creates liquidity in the market initially
+        # Init IPO trader that creates liquidity in the market initially
+        ipo_id = self.__init_ipo()
         self.__init_inst()  # Creates all institutional traders
 
         env = simpy.Environment()  # Create trading environment
 
-        trader_response = self.supabase.table("traders").select("*").eq("type", "institutional").execute()
-        stock_response = self.supabase.table("stock_list").select("*").execute()
+        trader_response = self.supabase.table("traders").select(
+            "*").eq("type", "institutional").execute()
+        stock_response = self.supabase.table(
+            "stock_list").select("*").execute()
 
         # Run the __process_day method within our environment
-        env.process(self.__process_day(env, trader_response, stock_response, ipo_id))
+        env.process(self.__process_day(
+            env, trader_response, stock_response, ipo_id))
         # Run the simulation until it reaches 390
         env.run(until=390)  # 390 minutes in one trading day
 
