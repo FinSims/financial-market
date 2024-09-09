@@ -52,7 +52,7 @@ class Trader:
         return self.trade_history
 
     def create_market_order(self, ticker, side, quantity):
-        from utilities.Security import Security
+        from .Security import Security
         instrument = Security.get_instance(ticker)
 
         if instrument is None:
@@ -91,7 +91,7 @@ class Trader:
                 instrument.execute_market_order(trade)
 
     def create_limit_order(self, ticker, side, price, quantity):
-        from utilities.Security import Security
+        from .Security import Security
         instrument = Security.get_instance(ticker)
 
         if instrument is None:
