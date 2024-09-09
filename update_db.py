@@ -5,6 +5,7 @@ import csv
 from dotenv import load_dotenv
 import os
 from supabase import create_client, Client
+from datetime import datetime
 
 # Load environment variables from .env file
 load_dotenv()
@@ -41,6 +42,27 @@ def get_recommendations(stock):
     _3m_dict = period_dicts["-3m"]
 
     return _0m_dict, _1m_dict, _2m_dict, _3m_dict
+
+
+def get_stock_volume(ticker):
+    stock = yf.Ticker(ticker)
+    today = datetime.today().strftime('%Y-%m-%d')
+
+    # Fetch stock history data up to today's date
+    data = stock.history(period="1d", start="2021-01-01", end=today)
+    data = data["Volume"]
+    return data.iloc[-1]
+
+
+with open("constituents.csv") as dataFile:
+    reader = csv.DictReader(dataFile)
+
+    for row in reader:
+        ticker = row["Symbol"]
+        vol = get_stock_volume(ticker)
+        supabase.table("stock_list").update({
+            "volume": float(vol)
+        }).eq("ticker", ticker).execute()
 
 
 def get_stock_rating(month_dict):
@@ -95,7 +117,8 @@ with open("constituents.csv") as dataFile:
         weights = [0.4, 0.3, 0.2, 0.1]
 
         # Filter out the None values
-        valid_ratings_weights = [(r, w) for r, w in zip(ratings, weights) if r is not None]
+        valid_ratings_weights = [(r, w) for r, w in zip(
+            ratings, weights) if r is not None]
 
         if not valid_ratings_weights:  # If all ratings are None
             print(ticker)
