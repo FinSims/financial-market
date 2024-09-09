@@ -1,8 +1,8 @@
-import math
 from utilities.Trader import Trader
+from utilities.Security import Security
 from services.SupabaseClient import SupabaseClient
 from supabase import Client
-from utilities.Security import Security
+import math
 
 
 class InstitutionalTrader(Trader):

@@ -270,14 +270,14 @@ class TechnicalTrader:
 
 
 # Example usage
-trader = TechnicalTrader("TSLA")
-trader.generate_signals()
-trader.plot_bollinger_bands_with_signals()
+# trader = TechnicalTrader("TSLA")
+# trader.generate_signals()
+# trader.plot_bollinger_bands_with_signals()
 
-total_return, strategy_return = trader.backtest()
-print(f"Buy and Hold Return: {total_return:.2%}")
-print(f"Strategy Return: {strategy_return:.2%}")
+# total_return, strategy_return = trader.backtest()
+# print(f"Buy and Hold Return: {total_return:.2%}")
+# print(f"Strategy Return: {strategy_return:.2%}")
 
-final_df = trader.create_final_df()
-print(final_df.head(10))
-print(final_df.tail(10))
+# final_df = trader.create_final_df()
+# print(final_df.head(10))
+# print(final_df.tail(10))
