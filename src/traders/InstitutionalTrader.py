@@ -1,6 +1,6 @@
-from utilities.Trader import Trader
-from utilities.Security import Security
-from services.SupabaseClient import SupabaseClient
+from ..utilities.Trader import Trader
+from ..utilities.Security import Security
+from ..services.SupabaseClient import SupabaseClient
 from supabase import Client
 import math
 

@@ -1,5 +1,4 @@
-import utilities.Trader as Trader
-
+from ..utilities.Trader import Trader
 import yfinance as yf
 import matplotlib.pyplot as plt
 from datetime import *

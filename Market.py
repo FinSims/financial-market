@@ -2,13 +2,13 @@ import random
 
 import simpy
 import datetime
-from utilities.Trader import Trader
+from src.utilities.Trader import Trader
 import uuid
-from services.SupabaseClient import SupabaseClient
+from src.services.SupabaseClient import SupabaseClient
 from supabase import Client
-from InstitutionalTrader import InstitutionalTrader
+from src.traders.InstitutionalTrader import InstitutionalTrader
 import random
-from utilities.Security import Security
+from src.utilities.Security import Security
 import yfinance as yf
 
 

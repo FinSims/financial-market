@@ -1,5 +1,6 @@
 from datetime import datetime, time
 import yfinance as yf
+from .Trader import Trader
 
 
 class Security:
@@ -58,7 +59,6 @@ class Security:
             self.ask = 0
 
     def execute_market_order(self, trade):
-        from utilities.Trader import Trader
         # buy_orders and sell_orders are sorted appropriately
         self.update_bid_ask()
 
@@ -161,7 +161,6 @@ class Security:
                     break
 
     def execute_limit_order(self, side):
-        from utilities.Trader import Trader
         # buy_orders and sell_orders are sorted appropriately
         self.update_bid_ask()
 

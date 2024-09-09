@@ -3,9 +3,9 @@ from tabulate import tabulate
 import time
 import matplotlib.pyplot as plt
 from matplotlib import pyplot as plt
-from utilities.Security import Security
-from utilities.Trader import Trader
-from InstitutionalTrader import InstitutionalTrader
+from src.utilities.Security import Security
+from src.utilities.Trader import Trader
+from src.traders.InstitutionalTrader import InstitutionalTrader
 
 
 def plot_security_prices(security):
