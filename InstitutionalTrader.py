@@ -56,5 +56,5 @@ class InstitutionalTrader(Trader):
             super().create_limit_order(stock_ticker, "sell", stock.bid, quantity)
 
 
-trader = InstitutionalTrader(1000000)
-trader.generate_trade_signal("AAPL", 75, 20, "9:30")
+# trader = InstitutionalTrader(1000000)
+# trader.generate_trade_signal("AAPL", 75, 20, "9:30")
