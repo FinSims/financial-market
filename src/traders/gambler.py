@@ -16,3 +16,7 @@ class Gambler:
     def get_stocks(self):
         stocks = self.supabase.table("stock_list").select("*").execute()
         return stocks
+
+    def choose_stock(self):
+        stocks = self.get_stocks()
+        # Make this choose a stock with the hihgest beta and volatility
