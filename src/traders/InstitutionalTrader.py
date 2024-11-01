@@ -9,6 +9,7 @@ class InstitutionalTrader(Trader):
     def __init__(self, balance):
         super().__init__(True, balance)
 
+    # generates trade signal on a min and max percentile based on a stock rating based on analyst recommendations
     def generate_trade_signal(self, stock_ticker, min_percentile, max_percentile, time):
         supabase_instance: Client = SupabaseClient.get_instance()
 
