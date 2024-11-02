@@ -1,6 +1,6 @@
 from datetime import datetime, time
 import yfinance as yf
-from .Trader import Trader
+from ..utilities.Trader import Trader
 
 
 class Security:
@@ -246,6 +246,27 @@ class Security:
                     break
             else:
                 break
+
+    def calculate_pe_ratio(self):
+        stock = yf.Ticker(self.ticker)
+        if "trailingPE" in stock.info:
+            return stock.info["trailingPE"]
+        else:
+            return None
+
+    def calculate_pb_ratio(self):
+        stock = yf.Ticker(self.ticker)
+        if "priceToBook" in stock.info:
+            return stock.info["priceToBook"]
+        else:
+            return None
+
+    def calculate_de_ratio(self):
+        stock = yf.Ticker(self.ticker)
+        if "debtToEquity" in stock.info:
+            return stock.info["debtToEquity"] / 100
+        else:
+            return None
 
     def display_order_book(self):
         return self.buy_orders + self.sell_orders

@@ -5,13 +5,16 @@ from supabase import Client
 import math
 
 
-# Generates trade signal on a min and max percentile based on a stock rating based on analyst recommendations
 class AnalystInformedStrategy(TradingStrategy):
     def __init__(self, min_percentile, max_percentile):
         self.min_percentile = min_percentile
         self.max_percentile = max_percentile
 
     def execute(self, stock_ticker, balance, create_limit_order, time):
+        """
+        Execute the Analyst Informed Strategy for a given stock, using analyst recommendations to buy or short a
+        given stock.
+        """
         supabase_instance: Client = SupabaseClient.get_instance()
 
         ordered_tickers = supabase_instance.table("stock_list").select("ticker").order(
@@ -46,7 +49,7 @@ class AnalystInformedStrategy(TradingStrategy):
             quantity = math.floor((balance * .05) /
                                   stock.last[0]["price"])
             print("\nSubmitted buy order for stock: " +
-                  stock_ticker + " at " + time)
+                  stock_ticker + " at " + time + " using the Analyst Informed Strategy")
             create_limit_order(stock_ticker, "buy", stock.ask, quantity)
 
         if overall_percentile < self.max_percentile:
@@ -54,5 +57,5 @@ class AnalystInformedStrategy(TradingStrategy):
             quantity = math.floor((balance * .05) /
                                   stock.last[0]["price"])
             print("\nSubmitted short sell order for stock: " +
-                  stock_ticker + " at " + time)
+                  stock_ticker + " at " + time + " using the Analyst Informed Strategy")
             create_limit_order(stock_ticker, "sell", stock.bid, quantity)

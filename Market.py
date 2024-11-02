@@ -8,6 +8,7 @@ from src.services.SupabaseClient import SupabaseClient
 from supabase import Client
 from src.traders.InstitutionalTrader import InstitutionalTrader
 from src.strategies.AnalystInformedStrategy import AnalystInformedStrategy
+from src.strategies.DeepValueStrategy import DeepValueStrategy
 import random
 from src.utilities.Security import Security
 import yfinance as yf
@@ -43,8 +44,10 @@ class Market:
             "type", "institutional").execute()
 
         inst_traders = int(self.percent_inst * self.total_traders)
+        analyst_traders = int(inst_traders / 2)
+        value_traders = inst_traders - analyst_traders
 
-        for i in range(inst_traders):
+        for i in range(analyst_traders):
             balance = random.uniform(self.inst_min, self.inst_max)
 
             # Buys a stock if percentile is over 75, short sells stock if percentile is below 20
@@ -56,7 +59,24 @@ class Market:
                 "trader_id": str(trader.id),
                 "type": "institutional",
                 "balance": balance,
-                "canShort": True
+                "canShort": True,
+                "strategy": "Analyst Informed Strategy"
+            }).execute()
+
+        for i in range(value_traders):
+            balance = random.uniform(self.inst_min, self.inst_max)
+
+            # Buys a stock if percentile is over 75, short sells stock if percentile is below 20
+            deep_value_strategy = DeepValueStrategy()
+            trader = InstitutionalTrader(balance, deep_value_strategy)
+
+            self.supabase.table("traders").insert({
+                "simulation_id": str(self.simulation_id),
+                "trader_id": str(trader.id),
+                "type": "institutional",
+                "balance": balance,
+                "canShort": False,
+                "strategy": "Deep Value Strategy"
             }).execute()
 
     def __process_day(self, _env, trader_response, stock_response, ipo_id):
@@ -82,7 +102,7 @@ class Market:
                 uuid.UUID(random_trader["trader_id"]))
 
             trader.execute_trade(random_stock["ticker"], time)
-            yield _env.timeout(60)  # Advance by one minute
+            yield _env.timeout(5)  # Advance by one minute
 
     def open_market(self):
         # Init IPO trader that creates liquidity in the market initially

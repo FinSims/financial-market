@@ -1,2 +1,3 @@
 from .TradingStrategy import TradingStrategy
 from .AnalystInformedStrategy import AnalystInformedStrategy
+from .DeepValueStrategy import DeepValueStrategy
