@@ -7,6 +7,7 @@ import uuid
 from src.services.SupabaseClient import SupabaseClient
 from supabase import Client
 from src.traders.InstitutionalTrader import InstitutionalTrader
+from src.strategies.AnalystInformedStrategy import AnalystInformedStrategy
 import random
 from src.utilities.Security import Security
 import yfinance as yf
@@ -45,7 +46,10 @@ class Market:
 
         for i in range(inst_traders):
             balance = random.uniform(self.inst_min, self.inst_max)
-            trader = InstitutionalTrader(balance)
+
+            # Buys a stock if percentile is over 75, short sells stock if percentile is below 20
+            analyst_informed_strategy = AnalystInformedStrategy(75, 20)
+            trader = InstitutionalTrader(balance, analyst_informed_strategy)
 
             self.supabase.table("traders").insert({
                 "simulation_id": str(self.simulation_id),
@@ -76,9 +80,9 @@ class Market:
 
             trader = InstitutionalTrader.search_by_id(
                 uuid.UUID(random_trader["trader_id"]))
-            # Buys a stock if percentile is over 75, short sells stock if percentile is below 20
-            trader.generate_trade_signal(random_stock["ticker"], 75, 20, time)
-            yield _env.timeout(1)  # Advance by one minute
+
+            trader.execute_trade(random_stock["ticker"], time)
+            yield _env.timeout(60)  # Advance by one minute
 
     def open_market(self):
         # Init IPO trader that creates liquidity in the market initially
