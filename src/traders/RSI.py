@@ -259,46 +259,143 @@ class SimpleMovingAverage:
         return fig
 
 
+import yfinance as yf
+from datetime import date, timedelta
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+import matplotlib.dates as mdates
+
+
 class ExponentialMovingAverage:
     def __init__(self, stock, period=10, days=90):
+        # Add period to days to account for EMA calculation
         self.stock = yf.download(
-            stock, date.today() - timedelta(days), date.today())
+            stock, date.today() - timedelta(days + period), date.today())
         self.period = period
         self.stock_name = stock
 
-    def calculate_ema_helper(self, end, index):
-        k = 2/(self.period+1)
-        ema = self.stock['Close'][index]
-        if index == 0:
-            return ema
-        else:
-            ema = ema * k + self.calculate_ema_helper(end, index - 1) * (1 - k)
-            print(ema)
-        return ema
-
     def calculate_ema(self):
-        stock = self.stock['Close']
-        stocks = []
-        self.stock['Close'].dropna(inplace=True)
-        for end in range(len(stock)):
-            print(end)
-
-            stocks.append(self.calculate_ema_helper(end, end))
-        print(len(stocks))
-        self.stock["EMA"] = stocks
-        return self.stock["EMA"]
+        """
+        Calculate Exponential Moving Average using pandas ewm.
+        """
+        return self.stock['Close'].ewm(span=self.period, adjust=False).mean()
 
     def display(self):
-        self.calculate_ema()
+        """
+        Displays the stock price with EMA overlay.
+        """
+        plt.style.use('seaborn-v0_8')
 
-        ax1 = plt.subplot2grid((10, 1), (0, 0), rowspan=4, colspan=1)
-        ax2 = plt.subplot2grid((10, 1), (5, 0), rowspan=4, colspan=1)
-        ax1.plot(self.stock['Close'], linewidth=2.5)
+        # Calculate EMA and find first valid value
+        self.stock["EMA"] = self.calculate_ema()
+        first_valid_index = self.stock["EMA"].first_valid_index()
 
-        ax1.set_title(f'{self.stock_name}')
-        ax2.plot(self.stock['EMA'], color='red', linewidth=1.5)
-        ax2.set_title(f'{self.stock_name} EMA')
+        # Trim both price and EMA data to start from first valid EMA value
+        trimmed_data = self.stock[first_valid_index:]
 
+        # Create figure
+        fig, ax = plt.subplots(figsize=(12, 6))
+
+        # Plot price and EMA
+        ax.plot(trimmed_data.index, trimmed_data['Close'], linewidth=1.5,
+                color='blue', label='Price')
+        ax.plot(trimmed_data.index, trimmed_data['EMA'], linewidth=1.5,
+                color='red', label=f'EMA ({self.period})')
+
+        # Formatting
+        ax.set_title(f'{self.stock_name} Price with {self.period}-day Exponential Moving Average',
+                     fontsize=12, pad=15)
+        ax.grid(True, alpha=0.3)
+        ax.legend(loc='upper left')
+
+        # Format dates
+        ax.xaxis.set_major_locator(mdates.AutoDateLocator())
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+        plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
+
+        # Ensure layout is tight
+        plt.tight_layout()
+
+        return fig
+
+    def get_current_ema(self):
+        """
+        Returns the most recent EMA value.
+        """
+        ema = self.calculate_ema()
+        return ema.iloc[-1]
+
+    def get_signals(self):
+        """
+        Returns buy/sell signals based on price crossing the EMA.
+        """
+        self.stock['EMA'] = self.calculate_ema()
+        first_valid_index = self.stock["EMA"].first_valid_index()
+        trimmed_data = self.stock[first_valid_index:]
+
+        # Create signals when price crosses EMA
+        signals = pd.DataFrame(index=trimmed_data.index)
+        signals['Signal'] = 0
+
+        # Price crosses above EMA (buy signal)
+        signals.loc[(trimmed_data['Close'] > trimmed_data['EMA']) &
+                    (trimmed_data['Close'].shift(1) <= trimmed_data['EMA'].shift(1)), 'Signal'] = 1
+
+        # Price crosses below EMA (sell signal)
+        signals.loc[(trimmed_data['Close'] < trimmed_data['EMA']) &
+                    (trimmed_data['Close'].shift(1) >= trimmed_data['EMA'].shift(1)), 'Signal'] = -1
+
+        return signals
+
+    def display_with_signals(self):
+        """
+        Displays the stock price with EMA overlay and buy/sell signals.
+        """
+        plt.style.use('seaborn-v0_8')
+
+        # Calculate EMA and find first valid value
+        self.stock["EMA"] = self.calculate_ema()
+        first_valid_index = self.stock["EMA"].first_valid_index()
+
+        # Trim both price and EMA data to start from first valid EMA value
+        trimmed_data = self.stock[first_valid_index:]
+        signals = self.get_signals()
+
+        # Create figure
+        fig, ax = plt.subplots(figsize=(12, 6))
+
+        # Plot price and EMA
+        ax.plot(trimmed_data.index, trimmed_data['Close'], linewidth=1.5,
+                color='blue', label='Price')
+        ax.plot(trimmed_data.index, trimmed_data['EMA'], linewidth=1.5,
+                color='red', label=f'EMA ({self.period})')
+
+        # Plot buy signals
+        buy_signals = signals[signals['Signal'] == 1]
+        ax.scatter(buy_signals.index, trimmed_data.loc[buy_signals.index, 'Close'],
+                   marker='^', color='green', s=100, label='Buy Signal')
+
+        # Plot sell signals
+        sell_signals = signals[signals['Signal'] == -1]
+        ax.scatter(sell_signals.index, trimmed_data.loc[sell_signals.index, 'Close'],
+                   marker='v', color='red', s=100, label='Sell Signal')
+
+        # Formatting
+        ax.set_title(f'{self.stock_name} Price with {self.period}-day Exponential Moving Average',
+                     fontsize=12, pad=15)
+        ax.grid(True, alpha=0.3)
+        ax.legend(loc='upper left')
+
+        # Format dates
+        ax.xaxis.set_major_locator(mdates.AutoDateLocator())
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+        plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
+
+        # Ensure layout is tight
+        plt.tight_layout()
+
+        return fig
 
 if __name__ == "__main__":
     '''rsi = RelativeStrengthIndex("PLTR")
@@ -310,6 +407,6 @@ if __name__ == "__main__":
     sma.display()
     plt.show()'''
 
-    sma = SimpleMovingAverage("NKE")
-    sma.display()
+    ema = ExponentialMovingAverage("NKE")
+    ema.display()
     plt.show()
