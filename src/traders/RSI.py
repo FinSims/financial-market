@@ -120,30 +120,143 @@ class RelativeStrengthIndex:
         return rsi.iloc[-1]
 
 
+import yfinance as yf
+from datetime import date, timedelta
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+import matplotlib.dates as mdates
+
+
 class SimpleMovingAverage:
     def __init__(self, stock, period=10, days=90):
+        # Add period to days to account for SMA calculation
         self.stock = yf.download(
-            stock, date.today() - timedelta(days), date.today())
+            stock, date.today() - timedelta(days + period), date.today())
         self.period = period
         self.stock_name = stock
 
     def calculate_sma(self):
-        delta = self.stock['Close']
-
-        average_losses = delta.ewm(com=self.period - 1, adjust=False).mean()
-
-        return average_losses
+        """
+        Calculate Simple Moving Average for the stock.
+        """
+        return self.stock['Close'].rolling(window=self.period).mean()
 
     def display(self):
+        """
+        Displays the stock price with MA overlay.
+        """
+        plt.style.use('seaborn-v0_8')
+
+        # Calculate SMA and find first valid value
         self.stock["MA"] = self.calculate_sma()
+        first_valid_index = self.stock["MA"].first_valid_index()
 
-        ax1 = plt.subplot2grid((10, 1), (0, 0), rowspan=4, colspan=1)
-        ax2 = plt.subplot2grid((10, 1), (5, 0), rowspan=4, colspan=1)
-        ax1.plot(self.stock['Close'], linewidth=2.5)
+        # Trim both price and MA data to start from first valid MA value
+        trimmed_data = self.stock[first_valid_index:]
 
-        ax1.set_title(f'{self.stock_name}')
-        ax2.plot(self.stock['MA'], color='red', linewidth=1.5)
-        ax2.set_title(f'{self.stock_name} MA')
+        # Create figure
+        fig, ax = plt.subplots(figsize=(12, 6))
+
+        # Plot price and MA
+        ax.plot(trimmed_data.index, trimmed_data['Close'], linewidth=1.5,
+                color='blue', label='Price')
+        ax.plot(trimmed_data.index, trimmed_data['MA'], linewidth=1.5,
+                color='red', label=f'MA ({self.period})')
+
+        # Formatting
+        ax.set_title(f'{self.stock_name} Price with {self.period}-day Moving Average',
+                     fontsize=12, pad=15)
+        ax.grid(True, alpha=0.3)
+        ax.legend(loc='upper left')
+
+        # Format dates
+        ax.xaxis.set_major_locator(mdates.AutoDateLocator())
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+        plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
+
+        # Ensure layout is tight
+        plt.tight_layout()
+
+        return fig
+
+    def get_current_sma(self):
+        """
+        Returns the most recent SMA value.
+        """
+        sma = self.calculate_sma()
+        return sma.iloc[-1]
+
+    def get_signals(self):
+        """
+        Returns buy/sell signals based on price crossing the MA.
+        """
+        self.stock['MA'] = self.calculate_sma()
+        first_valid_index = self.stock["MA"].first_valid_index()
+        trimmed_data = self.stock[first_valid_index:]
+
+        # Create signals when price crosses MA
+        signals = pd.DataFrame(index=trimmed_data.index)
+        signals['Signal'] = 0
+
+        # Price crosses above MA (buy signal)
+        signals.loc[(trimmed_data['Close'] > trimmed_data['MA']) &
+                    (trimmed_data['Close'].shift(1) <= trimmed_data['MA'].shift(1)), 'Signal'] = 1
+
+        # Price crosses below MA (sell signal)
+        signals.loc[(trimmed_data['Close'] < trimmed_data['MA']) &
+                    (trimmed_data['Close'].shift(1) >= trimmed_data['MA'].shift(1)), 'Signal'] = -1
+
+        return signals
+
+    def display_with_signals(self):
+        """
+        Displays the stock price with MA overlay and buy/sell signals.
+        """
+        plt.style.use('seaborn-v0_8')
+
+        # Calculate SMA and find first valid value
+        self.stock["MA"] = self.calculate_sma()
+        first_valid_index = self.stock["MA"].first_valid_index()
+
+        # Trim both price and MA data to start from first valid MA value
+        trimmed_data = self.stock[first_valid_index:]
+        signals = self.get_signals()
+
+        # Create figure
+        fig, ax = plt.subplots(figsize=(12, 6))
+
+        # Plot price and MA
+        ax.plot(trimmed_data.index, trimmed_data['Close'], linewidth=1.5,
+                color='blue', label='Price')
+        ax.plot(trimmed_data.index, trimmed_data['MA'], linewidth=1.5,
+                color='red', label=f'MA ({self.period})')
+
+        # Plot buy signals
+        buy_signals = signals[signals['Signal'] == 1]
+        ax.scatter(buy_signals.index, trimmed_data.loc[buy_signals.index, 'Close'],
+                   marker='^', color='green', s=100, label='Buy Signal')
+
+        # Plot sell signals
+        sell_signals = signals[signals['Signal'] == -1]
+        ax.scatter(sell_signals.index, trimmed_data.loc[sell_signals.index, 'Close'],
+                   marker='v', color='red', s=100, label='Sell Signal')
+
+        # Formatting
+        ax.set_title(f'{self.stock_name} Price with {self.period}-day Moving Average',
+                     fontsize=12, pad=15)
+        ax.grid(True, alpha=0.3)
+        ax.legend(loc='upper left')
+
+        # Format dates
+        ax.xaxis.set_major_locator(mdates.AutoDateLocator())
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+        plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
+
+        # Ensure layout is tight
+        plt.tight_layout()
+
+        return fig
 
 
 class ExponentialMovingAverage:
@@ -197,6 +310,6 @@ if __name__ == "__main__":
     sma.display()
     plt.show()'''
 
-    rsi = RelativeStrengthIndex("NKE")
-    rsi.display()
+    sma = SimpleMovingAverage("NKE")
+    sma.display()
     plt.show()
